@@ -19,8 +19,6 @@ export default defineConfig({
     nitro(),
     viteReact(),
   ],
-  // Bundle all SSR deps: Vercel functions have no node_modules at runtime
-  ssr: {
-    noExternal: true,
-  },
+  // Bundle all SSR deps at build time only: Vercel functions have no node_modules at runtime
+  ssr: process.env.NODE_ENV === "production" ? { noExternal: true } : undefined,
 });
