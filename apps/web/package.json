@@ -8,7 +8,8 @@
     "dev": "vite dev",
     "check-types": "tsc -b ../../packages/api && vite build && tsc --noEmit",
     "env:generate": "varlock codegen",
-    "auth:generate": "varlock run -- pnpm dlx auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes"
+    "auth:generate": "varlock run -- pnpm dlx auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes",
+    "db:seed": "varlock run -- tsx scripts/seed.ts"
   },
   "dependencies": {
     "@orpc/client": "catalog:",
@@ -19,6 +20,7 @@
     "@steelhacks-2026/api": "workspace:*",
     "@steelhacks-2026/auth": "workspace:*",
     "@steelhacks-2026/db": "workspace:*",
+    "@steelhacks-2026/finance": "workspace:*",
     "@steelhacks-2026/ui": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-form": "catalog:",
@@ -28,6 +30,7 @@
     "@tanstack/react-start": "^1.168.49",
     "@varlock/vite-integration": "1.5.1",
     "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
     "nitro": "3.0.260903-beta",
@@ -48,6 +51,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.0.1",
+    "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "web-vitals": "^6.2.1"

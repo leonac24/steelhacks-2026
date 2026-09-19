@@ -20,7 +20,8 @@ export function createAuth(env: AuthConfig, database: Database) {
     emailAndPassword: { enabled: true },
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
-    plugins: [tanstackStartCookies(), expo()],
+    // Cookie integration must stay last so it forwards every Set-Cookie.
+    plugins: [expo(), tanstackStartCookies()],
   });
 }
 

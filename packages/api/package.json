@@ -16,7 +16,9 @@
     "@orpc/zod": "catalog:",
     "@steelhacks-2026/auth": "workspace:*",
     "@steelhacks-2026/db": "workspace:*",
+    "@steelhacks-2026/finance": "workspace:*",
     "@types/pg": "^8.23.1",
+    "bcryptjs": "^3.0.3",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

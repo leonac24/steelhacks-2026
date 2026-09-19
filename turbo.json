@@ -37,6 +37,10 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": []
+    },
+    "db:seed": {
+      "cache": false,
+      "interactive": true
     }
   },
   "globalEnv": [
