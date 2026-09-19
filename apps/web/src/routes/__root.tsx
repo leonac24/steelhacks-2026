@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import { AppStateProvider } from "@/lib/app-state";
 import type { orpc } from "@/utils/orpc";
 
 import Header from "../components/header";
@@ -25,7 +26,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "My App",
+        title: "SteelHacks 2026",
       },
     ],
     links: [
@@ -46,10 +47,12 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
+        <AppStateProvider>
+          <div className="grid h-svh grid-rows-[auto_1fr] overflow-y-auto">
+            <Header />
+            <Outlet />
+          </div>
+        </AppStateProvider>
         <Toaster richColors />
         <TanStackRouterDevtools position="bottom-left" />
         <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />

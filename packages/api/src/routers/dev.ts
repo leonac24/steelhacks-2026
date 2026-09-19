@@ -1,5 +1,6 @@
 // Buttons for the live demo. Only mounted when dev tools are enabled.
 import { ORPCError } from "@orpc/server";
+import { changeType as changeTypeEnum } from "@steelhacks-2026/db/schema/enums";
 import { bankAccount, transaction } from "@steelhacks-2026/db/schema/index";
 import { todayInTimezone } from "@steelhacks-2026/finance";
 import { eq, sql } from "drizzle-orm";
@@ -76,4 +77,34 @@ export const devRouter = {
   processApprovals: devProcedure.handler(({ context }) =>
     changeRequests.processTimeouts(context.db),
   ),
+
+  // Stands in for a phone call: proposes a change and immediately confirms it,
+  // exactly as /api/tools/propose-change + /api/tools/confirm-change will once
+  // milestone 7 lands. Lets the demo fill the approvals queue without Twilio.
+  simulateVoiceChange: devProcedure
+    .input(
+      z.object({
+        memberId: z.string(),
+        changeType: z.enum(changeTypeEnum.enumValues),
+        payload: z.unknown(),
+      }),
+    )
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      const proposed = await changeRequests.propose(context.db, {
+        memberId: input.memberId,
+        changeType: input.changeType,
+        payload: input.payload,
+        // No real call session; confirm below passes the same null so they match.
+        callSessionId: null,
+      });
+      const result = await changeRequests.confirm(context.db, {
+        confirmationId: proposed.confirmationId,
+        callSessionId: null,
+      });
+      if (!result.ok) {
+        throw new ORPCError("CONFLICT", { message: `Confirm failed: ${result.reason}` });
+      }
+      return { summaryText: proposed.summaryText, status: result.status };
+    }),
 };
