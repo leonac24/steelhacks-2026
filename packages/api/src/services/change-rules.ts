@@ -21,8 +21,8 @@ export type AlertRuleType = (typeof alertRuleType.enumValues)[number];
 export const CONFIRMATION_TTL_MS = 5 * 60_000;
 export const APPROVAL_WINDOW_MS = 24 * 60 * 60_000;
 
-const cents = z.number().int().min(0).max(10_000_000);
-const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24-hour)");
+export const cents = z.number().int().min(0).max(10_000_000);
+export const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24-hour)");
 
 export const payloadSchemas = {
   budget_update: z.object({

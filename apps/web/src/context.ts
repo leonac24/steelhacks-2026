@@ -1,7 +1,7 @@
 import type { Context as ApiContext } from "@steelhacks-2026/api/context";
 
-import { db } from "./services";
-import { auth } from "./services";
+import { ENV } from "./env.server";
+import { auth, db } from "./services";
 
 export async function createContext({ req }: { req: Request }): Promise<ApiContext> {
   const session = await auth.api.getSession({
@@ -10,6 +10,8 @@ export async function createContext({ req }: { req: Request }): Promise<ApiConte
   return {
     db,
     session,
+    bankProvider: ENV.BANK_PROVIDER,
+    devToolsEnabled: ENV.NODE_ENV !== "production" || ENV.DEV_TOOLS_ENABLED === true,
   };
 }
 

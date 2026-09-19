@@ -48,6 +48,7 @@
     "BETTER_AUTH_URL",
     "CI",
     "DATABASE_URL",
+    "DATABASE_URL_DIRECT",
     "EXPO_PUBLIC_SERVER_URL",
     "NODE_ENV",
     "VERCEL",
