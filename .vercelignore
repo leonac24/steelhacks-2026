@@ -6,6 +6,8 @@
 **/.env
 **/.env.*
 !**/.env.example
+# Varlock schemas hold no secrets and are needed at install time.
+!**/.env.schema
 local.db
 local.db-*
 .alchemy/

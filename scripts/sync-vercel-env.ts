@@ -6,7 +6,13 @@ const DEFAULT_ENVIRONMENT = "preview";
 const VALID_ENVIRONMENTS = new Set(["development", "preview", "production"]);
 const VERCEL_COMMAND = ["pnpm", "exec", "vercel"] as const;
 const DEFAULT_FILES = ["apps/web/.env"];
-const SKIP_KEYS = new Set(["BETTER_AUTH_URL", "CORS_ORIGIN", "NODE_ENV"]);
+// PUBLIC_POSTGRES_CLAIM_URL is Neon's local claim link; the app never reads it.
+const SKIP_KEYS = new Set([
+  "BETTER_AUTH_URL",
+  "CORS_ORIGIN",
+  "NODE_ENV",
+  "PUBLIC_POSTGRES_CLAIM_URL",
+]);
 const OVERRIDE_KEYS = new Map([]);
 
 const args = process.argv.slice(2);
