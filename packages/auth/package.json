@@ -1,0 +1,22 @@
+{
+  "name": "@steelhacks-2026/auth",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check-types": "tsc -b"
+  },
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@steelhacks-2026/db": "workspace:*",
+    "better-auth": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@steelhacks-2026/config": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

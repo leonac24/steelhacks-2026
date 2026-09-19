@@ -1,0 +1,27 @@
+{
+  "name": "@steelhacks-2026/api",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check-types": "tsc -b"
+  },
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/zod": "catalog:",
+    "@steelhacks-2026/auth": "workspace:*",
+    "@steelhacks-2026/db": "workspace:*",
+    "@types/pg": "^8.23.1",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@steelhacks-2026/config": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "extends": "@steelhacks-2026/config/tsconfig.base.json"
+}
