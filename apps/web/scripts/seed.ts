@@ -26,7 +26,12 @@ import {
   trustedContact,
   user,
 } from "@steelhacks-2026/db/schema/index";
-import { addDays, nextDayOfMonth, todayInTimezone } from "@steelhacks-2026/finance";
+import {
+  addDays,
+  formatCentsForSpeech,
+  nextDayOfMonth,
+  todayInTimezone,
+} from "@steelhacks-2026/finance";
 import { eq, inArray } from "drizzle-orm";
 
 import { auth, db } from "../src/services";
@@ -200,19 +205,32 @@ async function main() {
     .returning();
   if (!checking) throw new Error("Failed to create bank account");
 
-  await db.insert(transaction).values(
-    history.map((t, i) => ({
-      memberId,
-      bankAccountId: checking.id,
-      providerTxnId: `mock_${memberId}_${i}`,
-      date: t.date,
-      amountCents: t.amountCents,
-      merchantName: t.merchantName,
-      category: t.category,
-      pending: t.date >= pendingFrom && t.amountCents > 0,
-      source: "bank" as const,
-    })),
+  const seededTxns = await db
+    .insert(transaction)
+    .values(
+      history.map((t, i) => ({
+        memberId,
+        bankAccountId: checking.id,
+        providerTxnId: `mock_${memberId}_${i}`,
+        date: t.date,
+        amountCents: t.amountCents,
+        merchantName: t.merchantName,
+        category: t.category,
+        pending: t.date >= pendingFrom && t.amountCents > 0,
+        source: "bank" as const,
+      })),
+    )
+    .returning({ createdAt: transaction.createdAt });
+
+  // Mark seeded history as already synced so only later rows count as "new".
+  const lastSeeded = seededTxns.reduce(
+    (max, t) => (t.createdAt > max ? t.createdAt : max),
+    new Date(0),
   );
+  await db
+    .update(bankConnection)
+    .set({ syncCursor: lastSeeded.toISOString() })
+    .where(eq(bankConnection.id, connection.id));
 
   await db.insert(recurringStream).values([
     {
@@ -250,6 +268,7 @@ async function main() {
   await db.insert(changeRequest).values({
     memberId,
     changeType: "alert_rule_toggle",
+    permissionChangeType: "alert_disable",
     payload: { type: "unusual_txn", enabled: false },
     summaryText: "Turn off calls about unusual charges",
     status: "awaiting_approval",
@@ -271,7 +290,19 @@ async function main() {
     });
   }
 
+  const depositActivity = lastDeposit
+    ? [
+        {
+          memberId,
+          type: "alert_sent" as const,
+          summaryText: `June called Dot: her Social Security deposit of ${formatCentsForSpeech(-lastDeposit.amountCents)} arrived.`,
+          createdAt: new Date(`${lastDeposit.date}T14:00:00Z`),
+        },
+      ]
+    : [];
+
   await db.insert(activityLog).values([
+    ...depositActivity,
     {
       memberId,
       type: "bank_synced",

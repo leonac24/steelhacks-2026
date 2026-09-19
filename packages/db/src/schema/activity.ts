@@ -10,6 +10,7 @@ import {
   callDirection,
   changeRequestStatus,
   changeType,
+  permissionChangeType,
 } from "./enums";
 import { member } from "./member";
 
@@ -43,10 +44,13 @@ export const changeRequest = pgTable(
       .notNull()
       .references(() => member.id, { onDelete: "cascade" }),
     changeType: changeType("change_type").notNull(),
+    // The permission this request was judged under, fixed at propose time so
+    // timeouts apply the same rule even if budgets change meanwhile.
+    permissionChangeType: permissionChangeType("permission_change_type").notNull(),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
     summaryText: text("summary_text").notNull(),
     status: changeRequestStatus("status").notNull().default("proposed"),
-    // Short code June reads back; must be confirmed within the expiry window.
+    // Opaque token the agent passes back to confirm; valid for a few minutes.
     confirmationId: text("confirmation_id").notNull().unique(),
     confirmationExpiresAt: timestamp("confirmation_expires_at").notNull(),
     approvalDeadline: timestamp("approval_deadline"),

@@ -8,5 +8,16 @@
     "outDir": "dist"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../db" }, { "path": "../auth" }, { "path": "../finance" }]
+  "references": [
+    {
+      "path": "../db"
+    },
+    {
+      "path": "../auth"
+    },
+    {
+      "path": "../finance"
+    }
+  ],
+  "exclude": ["src/**/*.test.ts"]
 }
