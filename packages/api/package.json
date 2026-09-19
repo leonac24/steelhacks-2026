@@ -21,6 +21,7 @@
     "@types/pg": "^8.23.1",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "catalog:",
+    "plaid": "^47.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {

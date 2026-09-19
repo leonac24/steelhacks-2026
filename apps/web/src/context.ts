@@ -1,7 +1,6 @@
 import type { Context as ApiContext } from "@steelhacks-2026/api/context";
 
-import { db } from "./services";
-import { auth } from "./services";
+import { auth, bankProvider, createSandboxItem, db, injectPlaidTransaction } from "./services";
 
 export async function createContext({ req }: { req: Request }): Promise<ApiContext> {
   const session = await auth.api.getSession({
@@ -10,6 +9,9 @@ export async function createContext({ req }: { req: Request }): Promise<ApiConte
   return {
     db,
     session,
+    bankProvider,
+    createSandboxPlaidItem: createSandboxItem,
+    injectPlaidTransaction,
   };
 }
 
