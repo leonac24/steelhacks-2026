@@ -21,10 +21,12 @@
     "@types/pg": "^8.23.1",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "catalog:",
+    "nodemailer": "^10.0.10",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@steelhacks-2026/config": "workspace:*",
+    "@types/nodemailer": "^8.0.2",
     "typescript": "^6.0.3",
     "vitest": "^5.0.1"
   }
