@@ -1,3 +1,5 @@
+// End-of-week overspend projection, used to warn before a budget blows.
+// For the month-to-date picture a dashboard shows, see budget-progress.ts.
 import { addDays, assertIsoDate, type IsoDate } from "./dates";
 
 export type BudgetPaceInput = {
