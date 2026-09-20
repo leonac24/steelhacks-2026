@@ -1,17 +1,42 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Drawer } from "expo-router/drawer";
-import { useThemeColor } from "heroui-native";
-import React, { useCallback } from "react";
-import { Pressable, Text } from "react-native";
+import { Spinner, useThemeColor } from "heroui-native";
+import { useCallback } from "react";
+import { Text, View } from "react-native";
 
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AuthScreen } from "@/components/auth-screen";
+import { HeaderActions } from "@/components/header-actions";
+import { authClient } from "@/lib/auth-client";
+
+type IconName = keyof typeof Ionicons.glyphMap;
+
+const SCREENS: { name: string; title: string; icon: IconName }[] = [
+  { name: "index", title: "Dashboard", icon: "grid-outline" },
+  { name: "bank", title: "Accounts", icon: "wallet-outline" },
+  { name: "transactions", title: "Transactions", icon: "receipt-outline" },
+  { name: "budget", title: "Budget", icon: "pie-chart-outline" },
+  { name: "approvals", title: "Approvals", icon: "checkmark-circle-outline" },
+  { name: "notifications", title: "Notifications", icon: "notifications-outline" },
+];
 
 function DrawerLayout() {
   const themeColorForeground = useThemeColor("foreground");
   const themeColorBackground = useThemeColor("background");
+  const { data: session, isPending } = authClient.useSession();
 
-  const renderThemeToggle = useCallback(() => <ThemeToggle />, []);
+  const renderHeaderActions = useCallback(() => <HeaderActions />, []);
+
+  if (isPending) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <Spinner size="lg" />
+      </View>
+    );
+  }
+
+  if (!session?.user) {
+    return <AuthScreen />;
+  }
 
   return (
     <Drawer
@@ -22,65 +47,26 @@ function DrawerLayout() {
           fontWeight: "600",
           color: themeColorForeground,
         },
-        headerRight: renderThemeToggle,
+        headerRight: renderHeaderActions,
         drawerStyle: { backgroundColor: themeColorBackground },
       }}
     >
-      <Drawer.Screen
-        name="index"
-        options={{
-          headerTitle: "Home",
-          drawerLabel: ({ color, focused }) => (
-            <Text style={{ color: focused ? color : themeColorForeground }}>Home</Text>
-          ),
-          drawerIcon: ({ size, color, focused }) => (
-            <Ionicons
-              name="home-outline"
-              size={size}
-              color={focused ? color : themeColorForeground}
-            />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="(tabs)"
-        options={{
-          headerTitle: "Tabs",
-          drawerLabel: ({ color, focused }) => (
-            <Text style={{ color: focused ? color : themeColorForeground }}>Tabs</Text>
-          ),
-          drawerIcon: ({ size, color, focused }) => (
-            <MaterialIcons
-              name="border-bottom"
-              size={size}
-              color={focused ? color : themeColorForeground}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable className="mr-4">
-                <Ionicons name="add-outline" size={24} color={themeColorForeground} />
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
-    <Drawer.Screen
-        name="todos"
-        options={{
-          headerTitle: "Todos",
-          drawerLabel: ({ color, focused }) => (
-            <Text style={{ color: focused ? color : themeColorForeground }}>Todos</Text>
-          ),
-          drawerIcon: ({ size, color, focused }) => (
-            <Ionicons
-              name="checkbox-outline"
-              size={size}
-              color={focused ? color : themeColorForeground}
-            />
-          ),
-        }}
-      />
+      {SCREENS.map(({ name, title, icon }) => (
+        <Drawer.Screen
+          key={name}
+          name={name}
+          options={{
+            headerTitle: title,
+            title,
+            drawerLabel: ({ color, focused }) => (
+              <Text style={{ color: focused ? color : themeColorForeground }}>{title}</Text>
+            ),
+            drawerIcon: ({ size, color, focused }) => (
+              <Ionicons name={icon} size={size} color={focused ? color : themeColorForeground} />
+            ),
+          }}
+        />
+      ))}
     </Drawer>
   );
 }
