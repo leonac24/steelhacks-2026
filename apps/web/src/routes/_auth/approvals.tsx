@@ -1,4 +1,4 @@
-// Everything June proposed by phone that needs a caretaker decision.
+// Everything Robin proposed by phone that needs a caretaker decision.
 // The dashboard pins these too; this page is the full queue.
 import { Button } from "@steelhacks-2026/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@steelhacks-2026/ui/components/card";

@@ -88,7 +88,7 @@ async function handleFailure(data: unknown) {
       await notifyCaretakers(
         db,
         member.id,
-        `${member.preferredName} didn't answer June's call about ${label}.`,
+        `${member.preferredName} didn't answer Robin's call about ${label}.`,
       );
     }
   }

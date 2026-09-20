@@ -1,55 +1,91 @@
-# steelhacks-2026
+# Robin — Phone Banking for Elders
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Start, Self, ORPC, and more.
+Robin helps older adults understand and manage their money **by phone call** — no app, no login, no PIN-typing on a tiny screen. A member calls Robin (or Robin calls them) and talks through balances, bills, and spending in plain language. A family caretaker links the bank account, sets budgets and safety rules, and supervises everything from a web dashboard.
 
-## Features
+See [`CONTEXT.md`](./CONTEXT.md) for the full glossary of terms (Member, Caretaker, Change Request, Alert, Safe to Spend, etc.) used throughout the code and docs.
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Start** - SSR framework with TanStack Router
-- **React Native** - Build mobile apps using React
-- **Expo** - Tools for React Native development
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
-- **Turborepo** - Optimized monorepo build system
+## What it does
+
+- **Member calls Robin, or Robin calls the member.** One [ElevenLabs](https://elevenlabs.io) voice agent (over Twilio) handles both directions, gated by a spoken PIN before any account details are shared — even on calls Robin places.
+- **Ask by voice:** current balance, upcoming bills, recent transactions, "can I afford this?" (Safe to Spend), and budget status.
+- **Propose changes by voice:** a member can ask to raise a budget or flag a transaction; depending on the caretaker's permission tier the change applies instantly, applies with a notification, or waits for caretaker approval.
+- **Proactive alerts:** Robin calls the member about a projected shortfall, an unfunded bill due soon, an unusual transaction, or a deposit that arrived — each deduplicated so the same real-world event never triggers two calls.
+- **Caretaker dashboard (web):** link a bank account (mock provider or [Plaid](https://plaid.com)), set budgets and alert rules, review pending approvals, read call summaries/transcripts, and get notified by email.
+- **Native app:** a lighter member-facing view built with Expo/React Native.
+
+### Why phone calls, not an app
+
+Voice is the interface an older adult already knows how to use. Robin trades screens and passwords for a conversation, while every financial action still goes through the same server-side authorization and audit trail a dashboard would have — see the [ADRs](./docs/adr) for how identity and permissions are enforced independent of what the voice model says or hallucinates.
+
+## Stack
+
+TypeScript monorepo on [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack): React + TanStack Start/Router (web), React Native + Expo (native), oRPC, Drizzle + PostgreSQL, Better-Auth, Turborepo, Oxlint/Oxfmt — plus ElevenLabs (voice agent), Twilio (telephony), Plaid (bank data), Gemini (fraud check), and Vercel (hosting + cron).
+
+## Project Structure
+
+```
+steelhacks-2026/
+├── apps/
+│   ├── web/         # Caretaker dashboard (React + TanStack Start) + server/API routes
+│   └── native/      # Member-facing mobile app (React Native, Expo)
+├── packages/
+│   ├── ui/          # Shared shadcn/ui components and styles
+│   ├── api/         # oRPC routers + business logic (alerts, budgets, change requests, voice tools)
+│   ├── auth/        # Authentication configuration & logic
+│   ├── db/          # Database schema & queries
+│   ├── finance/     # Shared money/finance domain logic
+│   └── config/      # Shared config
+└── docs/
+    ├── robin-prompt.md      # Robin's ElevenLabs system prompt (source of truth)
+    ├── agent-tools.json    # Robin's tool schema, pushed via sync-agent
+    ├── adr/                # Architecture decisions (PIN gating, single-agent design)
+    └── plans/              # Implementation plans
+```
 
 ## Getting Started
 
-First, install the dependencies:
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-## Database Setup
+### Database Setup
 
 This project uses PostgreSQL with Drizzle ORM.
 
 1. Make sure you have a PostgreSQL database set up.
 2. Update your `apps/web/.env` file with your PostgreSQL connection details.
-
 3. Apply the schema to your database:
 
 ```bash
 pnpm run db:push
 ```
 
-Then, run the development server:
+Then run the dev server:
 
 ```bash
 pnpm run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the fullstack application.
-Use the Expo Go app to run the mobile application.
+Open [http://localhost:3001](http://localhost:3001) for the caretaker dashboard. Use the Expo Go app to run the mobile application.
+
+By default `BANK_PROVIDER=mock` serves seeded demo data, so you can explore the dashboard without a Plaid account. Run `pnpm run db:seed` (via the `web` app) to seed a demo member/caretaker.
+
+### Voice agent (Robin) setup
+
+Voice features (`ELEVENLABS_*`) are optional for running the dashboard, but required to actually talk to Robin:
+
+1. Create an ElevenLabs Conversational AI agent and phone number.
+2. Set `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_PHONE_NUMBER_ID`, `ELEVENLABS_TOOL_SECRET`, `ELEVENLABS_WEBHOOK_SECRET` in `apps/web/.env`.
+3. Push the prompt and tool schema (`docs/robin-prompt.md`, `docs/agent-tools.json`) to the agent with the `sync-agent` script.
+4. Set `DEMO_MEMBER_PHONE` to the E.164 number you'll call from for a demo.
+
+Read [`docs/plans/voice-line.md`](./docs/plans/voice-line.md) for the full wiring (webhooks, PIN gate, alert dedupe) and [`docs/adr`](./docs/adr) for why it's built that way.
 
 ## UI Customization
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+Web and native share shadcn/ui primitives through `packages/ui`.
 
 - Change design tokens and global styles in `packages/ui/src/styles/globals.css`
 - Update shared primitives in `packages/ui/src/components/*`
@@ -75,7 +111,7 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 ## Environment Configuration
 
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `pnpm run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
+Each app owns its environment schema in `.env.schema` (see `apps/web/.env.schema` for the full list of variables, including bank provider, ElevenLabs, SMTP, and cron secrets). Varlock generates `src/env.ts` during installation; run `pnpm run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
 
 Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
 
@@ -89,35 +125,23 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 - Target: web + server
 - Config: `vercel.json`
-- Link the project first: pnpm run deploy:setup
-- Local Vercel dev: pnpm run dev:vercel
-- Sync preview env: pnpm run env:preview
-- Sync production env: pnpm run env:production
-- Dry-run check (no upload): pnpm run deploy:check
-- Preview deploy: pnpm run deploy
-- Production deploy: pnpm run deploy:prod
-  Vercel Services share project environment variables, but deploys do not upload local `.env` files automatically. Link the project with `vercel link`, then run the env sync command before your first deploy (otherwise the deployment starts with no env vars), or pass one-off envs with `vercel deploy -e KEY=value`.
-  Pass Vercel CLI flags to the env sync command directly, for example: `pnpm run env:production --scope your-team`.
+- Link the project first: `pnpm run deploy:setup`
+- Local Vercel dev: `pnpm run dev:vercel`
+- Sync preview env: `pnpm run env:preview`
+- Sync production env: `pnpm run env:production`
+- Dry-run check (no upload): `pnpm run deploy:check`
+- Preview deploy: `pnpm run deploy`
+- Production deploy: `pnpm run deploy:prod`
+
+Vercel Services share project environment variables, but deploys do not upload local `.env` files automatically. Link the project with `vercel link`, then run the env sync command before your first deploy (otherwise the deployment starts with no env vars), or pass one-off envs with `vercel deploy -e KEY=value`. Pass Vercel CLI flags to the env sync command directly, for example: `pnpm run env:production --scope your-team`.
+
+Cron endpoints (`/api/cron/*`, e.g. daily alerts) run on Vercel's daily cron schedule (Hobby plan limit) and are protected by `CRON_SECRET`; trigger them manually during a demo if you need a faster cadence.
 
 For more details, see the guide on [Deploying to Vercel](https://www.better-t-stack.dev/docs/guides/vercel).
 
 ## Git Hooks and Formatting
 
 - Run checks: `pnpm run check`
-
-## Project Structure
-
-```
-steelhacks-2026/
-├── apps/
-│   └── web/         # Fullstack application (React + TanStack Start)
-│   ├── native/      # Mobile application (React Native, Expo)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
-```
 
 ## Available Scripts
 

@@ -1,4 +1,4 @@
-// Transport-agnostic implementations of June's nine tools. No Request/Response
+// Transport-agnostic implementations of Robin's nine tools. No Request/Response
 // types here: the HTTP layer (M5) parses/authorizes and calls these, so they
 // stay thin and testable. Every dollar amount the LLM speaks is pre-formatted
 // via formatCentsForSpeech; never pass raw cents and let the model do math.
@@ -318,7 +318,7 @@ export async function flagTransaction(
 
   // Alert flow reuse: the member already knows about this charge, so the
   // "unusual_txn" alert is recorded as skipped — but the shared dedupe key
-  // means June will never proactively call about it either.
+  // means Robin will never proactively call about it either.
   await db
     .insert(alertSent)
     .values({

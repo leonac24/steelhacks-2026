@@ -1,6 +1,6 @@
 # Implementation plan: ElevenLabs voice line + proactive calls
 
-June's phone interface: inbound calls answered by an ElevenLabs agent over Twilio, server tool webhooks backed by our existing services, proactive outbound alert calls, and post-call persistence. Every decision below was settled in a design session on 2026-09-19; do not relitigate them mid-implementation.
+Robin's phone interface: inbound calls answered by an ElevenLabs agent over Twilio, server tool webhooks backed by our existing services, proactive outbound alert calls, and post-call persistence. Every decision below was settled in a design session on 2026-09-19; do not relitigate them mid-implementation.
 
 **Read first:** `CONTEXT.md` (glossary — use its terms in code and comments), `docs/adr/0001-server-side-conversation-keyed-tool-gating.md`, `docs/adr/0002-single-agent-full-pin-gate-both-directions.md`.
 
@@ -22,7 +22,7 @@ M1 ─┬─ M2 ─┐                             │
 
 1. **PIN gating (ADR-0001):** sessions start unverified; every tool except `verify_pin` requires `call_session.verified`, checked server-side. 3 failed attempts → `pin_locked` activity (caretaker-visible), session locked for the rest of the call, no persistent lockout.
 2. **Outbound calls have the same full PIN gate (ADR-0002).** One agent for both directions.
-3. **Unknown caller:** polite refusal, June ends the call. No phone-based fallback login.
+3. **Unknown caller:** polite refusal, Robin ends the call. No phone-based fallback login.
 4. **Tool surface (exactly 9):** `verify_pin`, `get_balance`, `get_upcoming_bills`, `get_recent_transactions`, `check_affordability`, `get_budgets`, `propose_change`, `confirm_change`, `flag_transaction`. No `log_expense`, no `get_change_request_status`.
 5. **Permission tiers unchanged:** voice changes go through the existing `changeRequests.propose`/`confirm` service; existing tier defaults stay as-is (budget_increase remains `instant_notify`).
 6. **Alert dedupe — per-type semantic keys:**
@@ -30,9 +30,9 @@ M1 ─┬─ M2 ─┐                             │
    - `bill_due_unfunded` → `${memberId}:bill:${recurringStreamId}:${dueDate}`
    - `unusual_txn` → `${memberId}:unusual:${transactionId}`
    - `deposit_arrived` → `${memberId}:deposit:${transactionId}`
-7. **flag_transaction reuses the alert flow:** inserts `alert_sent` (`ruleType: "unusual_txn"`, the semantic dedupe key above, `channel: "call"`, `status: "skipped"` — member obviously already knows) + caretaker-visible `activity_log` (`type: "alert_sent"`) + `notifyCaretakers`. Shared dedupe key means June never proactively calls about a charge the member already reported.
+7. **flag_transaction reuses the alert flow:** inserts `alert_sent` (`ruleType: "unusual_txn"`, the semantic dedupe key above, `channel: "call"`, `status: "skipped"` — member obviously already knows) + caretaker-visible `activity_log` (`type: "alert_sent"`) + `notifyCaretakers`. Shared dedupe key means Robin never proactively calls about a charge the member already reported.
 8. **Post-call:** new `transcript` jsonb column on `call_session`; store summary + trimmed transcript; caretaker feed surfaces the summary only.
-9. **Agent config as code:** `docs/agent-tools.json` + `docs/june-prompt.md` are source of truth; `sync-agent` script pushes both via the ElevenLabs API.
+9. **Agent config as code:** `docs/agent-tools.json` + `docs/robin-prompt.md` are source of truth; `sync-agent` script pushes both via the ElevenLabs API.
 10. **Cron:** Vercel Hobby allows daily cron only → `vercel.json` daily crons + `CRON_SECRET`-protected endpoints hit manually (curl) during the demo.
 11. **Demo caller ID:** seed reads optional `DEMO_MEMBER_PHONE` for Dot's `phoneE164`.
 
@@ -93,7 +93,7 @@ Header `elevenlabs-signature: t=<unix_seconds>,v0=<hex>`. Verify: reject if `t` 
 
 ## Conventions (all milestones)
 
-- **Tool response contract:** every tool webhook returns HTTP 200 with either `{ "ok": true, ...fields }` or `{ "ok": false, "error": "<short sentence June can speak or act on>" }`. Never 4xx/5xx for business errors — the LLM handles them better as readable JSON.
+- **Tool response contract:** every tool webhook returns HTTP 200 with either `{ "ok": true, ...fields }` or `{ "ok": false, "error": "<short sentence Robin can speak or act on>" }`. Never 4xx/5xx for business errors — the LLM handles them better as readable JSON.
 - **Speech-ready money:** every dollar amount in tool responses is a string produced by `formatCentsForSpeech()` from `@steelhacks-2026/finance` (field suffix `_spoken`); include the raw `*_cents` integer alongside only when the agent might need to pass it back.
 - **Secret header for init + tools routes:** `x-voice-secret: <ELEVENLABS_TOOL_SECRET>`, compared with `crypto.timingSafeEqual`. Wrong/missing secret → 401 (these are transport-auth failures, not business errors).
 - **Session resolution:** tools receive `conversation_id` in the body via the platform-injected `system__conversation_id` dynamic variable — never as an LLM-supplied param. Resolve via `getSessionByConversationId`; no session → `{ ok: false, error: "No active call session." }`.
@@ -109,7 +109,7 @@ Nothing is provisioned yet. Items marked ⏳ can happen while agents run M1–M6
 2. ⏳ **ElevenLabs account** (Creator tier or above recommended — Twilio integration requires a paid plan). Create an API key → `ELEVENLABS_API_KEY`.
 3. ⏳ **Create the agent** in the ElevenLabs dashboard (blank is fine — the sync script will configure prompt/tools; pick the voice + set TTS speed ~0.9 in the dashboard). Record `ELEVENLABS_AGENT_ID`.
 4. ⏳ **Twilio:** create account, buy a local number (~$1.15/mo + per-minute). Record Account SID + Auth Token.
-5. ⏳ **Import the number into ElevenLabs:** dashboard → Phone Numbers → import with number + Twilio SID/token; assign the June agent for inbound. Record `ELEVENLABS_PHONE_NUMBER_ID` (visible in the dashboard/API).
+5. ⏳ **Import the number into ElevenLabs:** dashboard → Phone Numbers → import with number + Twilio SID/token; assign the Robin agent for inbound. Record `ELEVENLABS_PHONE_NUMBER_ID` (visible in the dashboard/API).
 6. ⏳ **`DEMO_MEMBER_PHONE`:** set to the E.164 of the phone you'll demo from (e.g. `+1412XXXXXXX`).
 7. ⏳ **Deploy to Vercel** (repo already has `vercel.json` + `scripts/sync-vercel-env.ts`): `pnpm env:production` to push env, deploy, note the stable URL (`BASE_URL` below). For local-tunnel dev instead: `cloudflared tunnel --url http://localhost:3001` and use that URL.
 8. 🔚 **Run `pnpm db:push` then `pnpm db:seed`** (after M1 merges — seed now uses `DEMO_MEMBER_PHONE`).
@@ -216,7 +216,7 @@ export async function recordPostCall(
   },
 ): Promise<CallSessionRow | null>;
 // Update session; then activity_log { type: session.direction === "inbound" ? "call_inbound" : "call_outbound",
-// summaryText: summaryText ?? "June spoke with <preferredName>.", visibleToCaretaker: true }.
+// summaryText: summaryText ?? "Robin spoke with <preferredName>.", visibleToCaretaker: true }.
 // Skip activity for unknown-caller sessions (memberId null → activity_log.memberId is notNull; just update endedAt).
 // Idempotent: if endedAt already set, update transcript/summary but don't double-log activity.
 ```
@@ -301,11 +301,11 @@ export function evaluateAlertConditions(input: {
 
 Rules (each only when its rule row is enabled):
 
-- **shortfall:** `summary.shortfall.willShortfall` → key `${memberId}:shortfall:${summary.nextIncome?.date ?? summary.shortfall.date}`; first message: "Hi <name>, it's June with a heads-up about your money — but first, could you tell me your PIN?" (all four first messages follow this shape: name + reason category + PIN ask, **no amounts or merchant names pre-PIN**, per ADR-0002).
+- **shortfall:** `summary.shortfall.willShortfall` → key `${memberId}:shortfall:${summary.nextIncome?.date ?? summary.shortfall.date}`; first message: "Hi <name>, it's Robin with a heads-up about your money — but first, could you tell me your PIN?" (all four first messages follow this shape: name + reason category + PIN ask, **no amounts or merchant names pre-PIN**, per ADR-0002).
 - **bill_due_unfunded:** for each bill stream with `nextExpectedDate` within 7 days where `availableBalanceCents < averageAmountCents` (+ bills due sooner) → key `${memberId}:bill:${stream.id}:${nextExpectedDate}`.
 - **unusual_txn:** for each recent outflow, `isUnusualTransaction(txn, history, { largeFloorCents: rule.thresholdCents ?? 10_000 })` → key `${memberId}:unusual:${txn.id}`.
 - **deposit_arrived:** recent transactions with `amountCents < 0` → key `${memberId}:deposit:${txn.id}`.
-  `dynamicVariables.alert_detail` carries the full detail sentence (amounts/merchants) for June to disclose **after** PIN.
+  `dynamicVariables.alert_detail` carries the full detail sentence (amounts/merchants) for Robin to disclose **after** PIN.
 
 ```ts
 export function isWithinQuietHours(
@@ -373,7 +373,7 @@ export function verifyElevenLabsSignature(
 }
 ```
 
-Identified: `"Hello <preferredName>! This is June. Before we talk about your money, could you tell me your PIN?"`. Unknown: `"Hello, this is June. I'm sorry, but I don't recognize this phone number, and I can only talk with family members who are set up with me. Please ask your family to help set you up. Goodbye for now."` (prompt instructs `end_call` when `identified` is `"no"`). **Every dynamic variable the prompt references must be present in both this response and the outbound placement (M4's `dynamicVariables`)** — keep the two key sets identical.
+Identified: `"Hello <preferredName>! This is Robin. Before we talk about your money, could you tell me your PIN?"`. Unknown: `"Hello, this is Robin. I'm sorry, but I don't recognize this phone number, and I can only talk with family members who are set up with me. Please ask your family to help set you up. Goodbye for now."` (prompt instructs `end_call` when `identified` is `"no"`). **Every dynamic variable the prompt references must be present in both this response and the outbound placement (M4's `dynamicVariables`)** — keep the two key sets identical.
 
 **`apps/web/src/routes/api/elevenlabs/tools/$tool.ts`** — POST. `requireToolSecret` → registry:
 
@@ -389,7 +389,7 @@ const tools: Record<
 
 Flow: unknown `$tool` → 404. Parse body JSON; `conversation_id` (zod) → `getSessionByConversationId`; none → `{ ok: false, error: "No active call session." }`. `verify_pin` (requiresVerified false) → `verifySessionPin`, map `PinResult` to speakable JSON (`wrong_pin` → `{ ok: false, error: "That PIN isn't right. You have N tries left." }`, `locked` → `{ ok: false, error: "Too many failed tries. For your safety I can't help on this call. Your family has been notified. Goodbye." }`). All others: `!session.verified` → `{ ok: false, error: "The member isn't verified yet — ask for their PIN and call verify_pin first." }`; `!member` → same-shape error; then zod-parse tool input (schemas imported from `voice-tools.ts`) and call the M3 function. zod failure → `{ ok: false, error: "<flattened message>" }`. Wrap everything in try/catch → `{ ok: false, error: "Something went wrong on my end." }` (log the real error).
 
-**`apps/web/src/routes/api/elevenlabs/post-call.ts`** — POST. Read `await request.text()` FIRST (HMAC needs the raw body), verify signature with `ENV.ELEVENLABS_WEBHOOK_SECRET` (fail → 401), then JSON.parse + loose zod (`z.looseObject`-style: only pluck what we use). `post_call_transcription` → `recordPostCall(db, { conversationId: data.conversation_id, summaryText: data.analysis?.transcript_summary ?? null, transcript: (data.transcript ?? []).map(t => ({ role: t.role, message: t.message ?? null, timeInCallSecs: t.time_in_call_secs ?? null })), endedAt: new Date() })`; additionally, if that session has an `alert_sent` row (`callSessionId = session.id`) with status `placed` → set `answered`. `call_initiation_failure` → find session by `data.conversation_id`; linked alert → status `unanswered` (`"busy"|"no-answer"`) or `failed`; if `memberSettings.notifyCaretakerOnUnanswered` → `notifyCaretakers(db, memberId, "<preferredName> didn't answer June's call about <ruleType>.")`. Unknown event types → ignore. **Always 200.**
+**`apps/web/src/routes/api/elevenlabs/post-call.ts`** — POST. Read `await request.text()` FIRST (HMAC needs the raw body), verify signature with `ENV.ELEVENLABS_WEBHOOK_SECRET` (fail → 401), then JSON.parse + loose zod (`z.looseObject`-style: only pluck what we use). `post_call_transcription` → `recordPostCall(db, { conversationId: data.conversation_id, summaryText: data.analysis?.transcript_summary ?? null, transcript: (data.transcript ?? []).map(t => ({ role: t.role, message: t.message ?? null, timeInCallSecs: t.time_in_call_secs ?? null })), endedAt: new Date() })`; additionally, if that session has an `alert_sent` row (`callSessionId = session.id`) with status `placed` → set `answered`. `call_initiation_failure` → find session by `data.conversation_id`; linked alert → status `unanswered` (`"busy"|"no-answer"`) or `failed`; if `memberSettings.notifyCaretakerOnUnanswered` → `notifyCaretakers(db, memberId, "<preferredName> didn't answer Robin's call about <ruleType>.")`. Unknown event types → ignore. **Always 200.**
 
 **`apps/web/src/routes/api/cron/alerts.ts`** and **`api/cron/approvals.ts`** — GET + POST (Vercel cron sends GET). Auth: `Authorization: Bearer ${ENV.CRON_SECRET}` exact match (timing-safe), else 401. Alerts → `runAlertsForAllMembers(db, createElevenLabsPlaceCall(env))` → JSON counts. Approvals → `changeRequests.processTimeouts(db)` → JSON counts.
 
@@ -455,14 +455,14 @@ LLM-supplied params per tool (each gets a `description`; everything else is just
 | `confirm_change`          | `confirmation_id: string` "The confirmation_id returned by propose_change, verbatim."                                                                                                                                                                                                                                                                                                        |
 | `flag_transaction`        | `transaction_id: string` "The transaction_id from get_recent_transactions for the charge the member doesn't recognize."                                                                                                                                                                                                                                                                      |
 
-**`docs/june-prompt.md`** — June's full system prompt. Required content: (1) persona — warm, patient, unrushed; short sentences; one question at a time; never use banking jargon; numbers come out like "about a hundred and thirty dollars" (tools pre-format — speak `*_spoken` values verbatim, never do arithmetic yourself, never invent a number that didn't come from a tool). (2) Identity flow — `{{identified}}` is "no": apologize per the refusal script and use the `end_call` system tool; otherwise greet `{{member_preferred_name}}` and require PIN verification via `verify_pin` before ANY other tool; on `locked`, say goodbye kindly and `end_call`. (3) Change flow — gather the change conversationally, call `propose_change`, read the returned summary back, and only after an unambiguous yes call `confirm_change`; explain "waiting for approval" outcomes gently. (4) Outbound — `{{call_direction}}` is "outbound": open per `{{call_reason}}` (`shortfall_warning` / `bill_due_unfunded` / `unusual_transaction` / `deposit_arrived`), but disclose `{{alert_detail}}` **only after** PIN verification. (5) Safety — never ask for card numbers/SSN; remind about scams when a charge is flagged; if the member sounds confused or distressed, suggest calling their family. References only these dynamic variables: `identified`, `member_preferred_name`, `call_direction`, `call_reason`, `alert_detail` (must stay in sync with init route + outbound placement).
+**`docs/robin-prompt.md`** — Robin's full system prompt. Required content: (1) persona — warm, patient, unrushed; short sentences; one question at a time; never use banking jargon; numbers come out like "about a hundred and thirty dollars" (tools pre-format — speak `*_spoken` values verbatim, never do arithmetic yourself, never invent a number that didn't come from a tool). (2) Identity flow — `{{identified}}` is "no": apologize per the refusal script and use the `end_call` system tool; otherwise greet `{{member_preferred_name}}` and require PIN verification via `verify_pin` before ANY other tool; on `locked`, say goodbye kindly and `end_call`. (3) Change flow — gather the change conversationally, call `propose_change`, read the returned summary back, and only after an unambiguous yes call `confirm_change`; explain "waiting for approval" outcomes gently. (4) Outbound — `{{call_direction}}` is "outbound": open per `{{call_reason}}` (`shortfall_warning` / `bill_due_unfunded` / `unusual_transaction` / `deposit_arrived`), but disclose `{{alert_detail}}` **only after** PIN verification. (5) Safety — never ask for card numbers/SSN; remind about scams when a charge is flagged; if the member sounds confused or distressed, suggest calling their family. References only these dynamic variables: `identified`, `member_preferred_name`, `call_direction`, `call_reason`, `alert_detail` (must stay in sync with init route + outbound placement).
 
 **`apps/web/scripts/sync-agent.ts`** (runs like `seed.ts`, via varlock; add `"sync:agent": "varlock run -- tsx scripts/sync-agent.ts"` to `apps/web/package.json` scripts):
 
 1. Read env `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_TOOL_SECRET`; base URL from `--base-url` argv flag, else `BETTER_AUTH_URL`. Fail fast with named missing vars.
-2. Load `../../docs/agent-tools.json` + `../../docs/june-prompt.md` (paths relative to `apps/web/scripts/`); substitute `{{BASE_URL}}`/`{{TOOL_SECRET}}`.
+2. Load `../../docs/agent-tools.json` + `../../docs/robin-prompt.md` (paths relative to `apps/web/scripts/`); substitute `{{BASE_URL}}`/`{{TOOL_SECRET}}`.
 3. `GET /v1/convai/tools` → match by `tool_config.name`; `PATCH` existing / `POST` new (`{ "tool_config": ... }`); collect all 9 ids.
-4. `GET /v1/convai/agents/{id}` → merge → `PATCH` with `conversation_config.agent.prompt = { ...existing prompt fields, prompt: <june-prompt.md content>, tool_ids: [ids] }` and `conversation_config.agent.first_message` = the identified-caller greeting (dashboard fallback; init webhook overrides per call).
+4. `GET /v1/convai/agents/{id}` → merge → `PATCH` with `conversation_config.agent.prompt = { ...existing prompt fields, prompt: <robin-prompt.md content>, tool_ids: [ids] }` and `conversation_config.agent.first_message` = the identified-caller greeting (dashboard fallback; init webhook overrides per call).
 5. Print a table: tool name → id → created/updated; agent patch status; and remind about the M0 step-10 dashboard-only settings.
 
 **Acceptance:** check-types/lint green; `pnpm --filter web sync:agent -- --base-url https://example.com` with fake creds fails fast with a clear HTTP error (proving arg/env plumbing), and `docs/agent-tools.json` parses + contains exactly 9 tools whose names match the M5 registry keys.
@@ -477,16 +477,16 @@ Local loop (before trusting Vercel): `pnpm dev` + `cloudflared tunnel --url http
 
 Scenario checklist — run each, fix, re-run:
 
-1. **Inbound happy path:** call from `DEMO_MEMBER_PHONE`. June greets "Dot", asks PIN. Say a wrong PIN (expect "N tries left"), then `1234`. Ask "what's my balance?" → spoken amounts match `pnpm db:studio` values. Ask "can I afford a sixty dollar dinner?" → sensible answer.
-2. **Lockout:** call, fail PIN 3×. June ends assistance; `activity_log` has `pin_locked`; caretaker feed (dashboard) shows it.
+1. **Inbound happy path:** call from `DEMO_MEMBER_PHONE`. Robin greets "Dot", asks PIN. Say a wrong PIN (expect "N tries left"), then `1234`. Ask "what's my balance?" → spoken amounts match `pnpm db:studio` values. Ask "can I afford a sixty dollar dinner?" → sensible answer.
+2. **Lockout:** call, fail PIN 3×. Robin ends assistance; `activity_log` has `pin_locked`; caretaker feed (dashboard) shows it.
 3. **Unknown caller:** call from another phone → polite refusal, call ends; `call_session` row with null member exists.
-4. **Change flow:** "raise my grocery budget to three hundred dollars" → June reads back → yes → applied (tier `instant_notify`) + `notifyCaretakers` console line; budget row updated.
-5. **Flag:** "there's a charge I don't recognize" → June lists recent transactions → flag one → `alert_sent` row `skipped` with `<memberId>:unusual:<txnId>`, activity visible, caretaker notified.
-6. **Proactive call:** as Maria (dashboard/dev tools), `dev.injectTransaction` with `amountCents: 25000, merchantName: "QuickCash Gift Cards"` → outbound call arrives → PIN → June describes the charge, offers to flag. `alert_sent` goes `queued→placed→answered`; second `dev.runAlerts` → `deduped`, no second call.
+4. **Change flow:** "raise my grocery budget to three hundred dollars" → Robin reads back → yes → applied (tier `instant_notify`) + `notifyCaretakers` console line; budget row updated.
+5. **Flag:** "there's a charge I don't recognize" → Robin lists recent transactions → flag one → `alert_sent` row `skipped` with `<memberId>:unusual:<txnId>`, activity visible, caretaker notified.
+6. **Proactive call:** as Maria (dashboard/dev tools), `dev.injectTransaction` with `amountCents: 25000, merchantName: "QuickCash Gift Cards"` → outbound call arrives → PIN → Robin describes the charge, offers to flag. `alert_sent` goes `queued→placed→answered`; second `dev.runAlerts` → `deduped`, no second call.
 7. **Cron + post-call:** `curl -H "Authorization: Bearer $CRON_SECRET" https://<BASE_URL>/api/cron/approvals`; after any call ends, `call_session` gains `summaryText` + `transcript` within ~a minute, and the summary shows in the caretaker activity feed.
 8. **Quiet hours:** set quiet hours to now via caretaker settings, `dev.runAlerts` with a fresh condition → status `skipped`. Reset after.
 
-Then repeat 1, 6, 7 against the Vercel deployment (re-run `sync:agent` with the prod URL and re-point the dashboard webhooks). Record the winning 3-minute demo order: (1) inbound balance + affordability, (2) budget raise + dashboard ping, (3) inject fraud txn → June calls the phone live, (4) caretaker feed recap.
+Then repeat 1, 6, 7 against the Vercel deployment (re-run `sync:agent` with the prod URL and re-point the dashboard webhooks). Record the winning 3-minute demo order: (1) inbound balance + affordability, (2) budget raise + dashboard ping, (3) inject fraud txn → Robin calls the phone live, (4) caretaker feed recap.
 
 ---
 

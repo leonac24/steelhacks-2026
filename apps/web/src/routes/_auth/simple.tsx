@@ -1,6 +1,6 @@
 // The senior interface. Same data as the caretaker dashboard, stripped to what
 // a member actually needs: how much is safe to spend, what's due, and one
-// button to call June.
+// button to call Robin.
 //
 // Accessibility rules for this file: body text never below 20px, touch targets
 // at least 64px tall, real contrast, no information carried by colour alone,
