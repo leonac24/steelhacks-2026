@@ -67,7 +67,7 @@ function AuthLayout() {
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <Link to="/" className="flex items-center gap-2 px-2 py-1.5">
+          <Link to="/" className="flex items-center justify-center gap-2 px-2 py-1.5">
             <Logo size={26} />
             <span className="text-sm font-bold tracking-tight group-data-[collapsible=icon]:hidden">
               NestEgg
@@ -105,9 +105,7 @@ function AuthLayout() {
             <UserMenu />
           </div>
         </header>
-        <div
-          className={`flex-1 overflow-y-auto p-4 sm:p-6 ${activePath.startsWith("/dashboard") ? "bg-white" : "bg-background"}`}
-        >
+        <div className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
           <Outlet />
         </div>
       </SidebarInset>

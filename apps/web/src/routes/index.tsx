@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mic, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 
 import { HeroBackground } from "@/components/hero-background";
+import { Logo } from "@/components/logo";
 import UserMenu from "@/components/user-menu";
 import { orpc } from "@/utils/orpc";
 
@@ -27,7 +28,7 @@ function HomeComponent() {
 
       <header className="relative z-20 flex items-center justify-between px-6 py-5 sm:px-10">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/brand/nestegg-static.png" alt="" className="size-7" />
+          <Logo size={30} />
           <span className="text-base font-bold tracking-tight text-white">NestEgg</span>
         </Link>
         <div className="flex items-center gap-4">

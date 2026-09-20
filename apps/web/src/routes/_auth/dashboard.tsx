@@ -66,7 +66,7 @@ function RouteComponent() {
   const topSpend = topCategories.reduce((sum, c) => sum + c.totalCents, 0) || 1;
 
   return (
-    <div className="theme-gold mx-auto flex max-w-6xl flex-col gap-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">
         Welcome back{activeMember ? `, ${activeMember.preferredName}'s dashboard` : ""}
       </h1>
