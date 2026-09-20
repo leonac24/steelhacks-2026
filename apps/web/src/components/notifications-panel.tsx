@@ -26,11 +26,30 @@ export function NotificationsPanel({ memberId }: { memberId: string }) {
         void queryClient.invalidateQueries({
           queryKey: orpc.caretaker.notifications.fraudAlerts.queryKey({ input: { memberId } }),
         });
-        toast.success(
-          result.newAlerts > 0
-            ? `Found ${result.newAlerts} new possible fraud alert${result.newAlerts === 1 ? "" : "s"}.`
-            : `Checked ${result.checked} recent transactions — nothing suspicious.`,
-        );
+        if (result.newAlerts === 0) {
+          toast.success(`Checked ${result.checked} recent transactions — nothing suspicious.`);
+        } else {
+          toast.success(
+            `Found ${result.newAlerts} new possible fraud alert${result.newAlerts === 1 ? "" : "s"}.` +
+              (result.emailed ? " Emailed the caretaker." : " (Email not configured.)"),
+          );
+        }
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+
+  const runBudgetCheck = useMutation(
+    orpc.caretaker.notifications.runBudgetCheck.mutationOptions({
+      onSuccess: (result) => {
+        if (result.newAlerts === 0) {
+          toast.success("No new budget alerts this week.");
+        } else {
+          toast.success(
+            `Sent ${result.newAlerts} new budget alert${result.newAlerts === 1 ? "" : "s"}.` +
+              (result.emailed ? " Emailed the caretaker." : " (Email not configured.)"),
+          );
+        }
       },
       onError: (error) => toast.error(error.message),
     }),
@@ -45,14 +64,24 @@ export function NotificationsPanel({ memberId }: { memberId: string }) {
         <CardTitle>
           Notifications{totalCount > 0 && <Badge className="ml-2">{totalCount}</Badge>}
         </CardTitle>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => runFraudCheck.mutate({ memberId })}
-          disabled={runFraudCheck.isPending}
-        >
-          {runFraudCheck.isPending ? "Checking..." : "Check for fraud"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => runBudgetCheck.mutate({ memberId })}
+            disabled={runBudgetCheck.isPending}
+          >
+            {runBudgetCheck.isPending ? "Checking..." : "Check budgets"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => runFraudCheck.mutate({ memberId })}
+            disabled={runFraudCheck.isPending}
+          >
+            {runFraudCheck.isPending ? "Checking..." : "Check for fraud"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col divide-y">
         {isLoading && <Skeleton className="h-16 w-full" />}

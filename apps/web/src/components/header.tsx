@@ -12,6 +12,7 @@ export default function Header() {
     { to: "/budget", label: "Budget" },
     { to: "/transactions", label: "Transactions" },
     { to: "/bank", label: "Bank" },
+    { to: "/notifications", label: "Notifications" },
     { to: "/todos", label: "Todos" },
   ] as const;
 
