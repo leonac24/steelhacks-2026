@@ -41,5 +41,10 @@ minimumReleaseAgeExclude:
   - '@orpc/tanstack-query@1.15.2'
   - '@orpc/zod@1.15.2'
   - 'copy-anything@4.1.1'
+overrides:
+  # workbox-build (via vite-plugin-pwa) resolves the latest rollup, which can be
+  # published within the minimumReleaseAge window and fail Vercel's lockfile
+  # supply-chain check. Pin to a version old enough to pass it.
+  rollup: 4.63.3
 patchedDependencies:
   '@varlock/vite-integration@1.5.2': patches/@varlock__vite-integration@1.5.2.patch
