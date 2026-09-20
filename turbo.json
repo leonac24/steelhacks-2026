@@ -3,16 +3,29 @@
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "check-types": {
-      "dependsOn": ["^check-types"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "^check-types"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "dev": {
       "cache": false,
@@ -35,7 +48,9 @@
       "persistent": true
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "db:seed": {
@@ -56,15 +71,27 @@
     "ELEVENLABS_AGENT_PHONE_NUMBER_ID",
     "ELEVENLABS_API_KEY",
     "EXPO_PUBLIC_SERVER_URL",
+    "GEMINI_API_KEY",
+    "GEMINI_MODEL",
     "NODE_ENV",
     "PLAID_CLIENT_ID",
     "PLAID_ENV",
     "PLAID_SECRET",
+    "PLAID_WEBHOOK_SECRET",
+    "SMTP_FROM",
+    "SMTP_HOST",
+    "SMTP_PASS",
+    "SMTP_PORT",
+    "SMTP_USER",
     "VERCEL",
     "VERCEL_ENV",
     "VERCEL_PROJECT_PRODUCTION_URL",
     "VERCEL_URL",
     "_VARLOCK_ENV_KEY"
   ],
-  "globalDependencies": [".env*", "apps/*/.env*", "packages/*/.env*"]
+  "globalDependencies": [
+    ".env*",
+    "apps/*/.env*",
+    "packages/*/.env*"
+  ]
 }
