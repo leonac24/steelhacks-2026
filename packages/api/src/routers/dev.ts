@@ -7,6 +7,7 @@ import z from "zod";
 
 import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
+import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
 
 export const devRouter = {
@@ -60,16 +61,24 @@ export const devRouter = {
 
       const provider = createBankProvider(context.db, context.bankProvider);
       const sync = await provider.syncTransactions(input.memberId);
-      // TODO(milestone 9): await alerts.evaluate(context.db, input.memberId) and place calls.
-      return { transactionId: row?.id, synced: sync.added.length };
+      const dispatched = await alerts.dispatch(context.db, input.memberId, {
+        newTransactions: sync.added,
+        elevenLabs: context.elevenLabs,
+      });
+      return { transactionId: row?.id, synced: sync.added.length, ...dispatched };
     }),
 
+  // Syncs the bank, then calls about anything worth calling about.
   runAlerts: devProcedure
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
-    .handler(async (): Promise<{ placed: number }> => {
-      // TODO(milestone 9): alerts.evaluate + outboundCalls.place.
-      throw new ORPCError("NOT_IMPLEMENTED", { message: "Alerts engine isn't built yet" });
+    .handler(async ({ input, context }) => {
+      const provider = createBankProvider(context.db, context.bankProvider);
+      const sync = await provider.syncTransactions(input.memberId);
+      return alerts.dispatch(context.db, input.memberId, {
+        newTransactions: sync.added,
+        elevenLabs: context.elevenLabs,
+      });
     }),
 
   // Settles every overdue approval now instead of waiting for cron.
