@@ -6,6 +6,23 @@ import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
 import * as changeRequests from "../services/change-requests";
+import { runBudgetCheck, runFraudCheck } from "../services/notifications";
+
+async function checkAfterNewTransactions(
+  db: Parameters<typeof runFraudCheck>[0],
+  memberId: string,
+  addedCount: number,
+  source: string,
+) {
+  if (addedCount === 0) return;
+  const [fraud, budgets] = await Promise.allSettled([
+    runFraudCheck(db, memberId),
+    runBudgetCheck(db, memberId),
+  ]);
+  if (fraud.status === "rejected") console.error(`${source}: fraud check failed`, fraud.reason);
+  if (budgets.status === "rejected")
+    console.error(`${source}: budget check failed`, budgets.reason);
+}
 
 export const devRouter = {
   // Mints a Plaid Sandbox item for a member so the demo has real data to
@@ -29,7 +46,16 @@ export const devRouter = {
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      return createBankProvider(context.db, context.bankProvider).syncTransactions(input.memberId);
+      const result = await createBankProvider(context.db, context.bankProvider).syncTransactions(
+        input.memberId,
+      );
+      await checkAfterNewTransactions(
+        context.db,
+        input.memberId,
+        result.added.length,
+        "dev.plaidSyncNow",
+      );
+      return result;
     }),
 
   // Simulates a new bank transaction, e.g. a $400 gift-card charge. Plaid mode
@@ -53,10 +79,16 @@ export const devRouter = {
     )
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      if (context.injectPlaidTransaction) {
-        return context.injectPlaidTransaction(input);
-      }
-      return injectMockTransaction(context.db, input);
+      const result = context.injectPlaidTransaction
+        ? await context.injectPlaidTransaction(input)
+        : await injectMockTransaction(context.db, input);
+      await checkAfterNewTransactions(
+        context.db,
+        input.memberId,
+        result.added.length,
+        "dev.injectTransaction",
+      );
+      return result;
     }),
 
   runAlerts: devProcedure

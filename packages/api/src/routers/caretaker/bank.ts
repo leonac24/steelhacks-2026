@@ -8,6 +8,7 @@ import z from "zod";
 import { protectedProcedure, requireCaretaker, requirePrimaryCaretaker } from "../../index";
 import * as activity from "../../services/activity";
 import * as bankAdmin from "../../services/bank-admin";
+import { runBudgetCheck, runFraudCheck } from "../../services/notifications";
 
 const memberInput = z.object({ memberId: z.string() });
 const cents = z.number().int().min(-100_000_000).max(100_000_000);
@@ -71,6 +72,18 @@ export const bankRouter = {
           summaryText: `${context.session.user.name} added a transaction: ${input.merchantName}.`,
           metadata: { transactionId: row.id },
         });
+
+        const [fraud, budgets] = await Promise.allSettled([
+          runFraudCheck(context.db, input.memberId),
+          runBudgetCheck(context.db, input.memberId),
+        ]);
+        if (fraud.status === "rejected") {
+          console.error("bank.transactions.create: fraud check failed", fraud.reason);
+        }
+        if (budgets.status === "rejected") {
+          console.error("bank.transactions.create: budget check failed", budgets.reason);
+        }
+
         return row;
       }),
 

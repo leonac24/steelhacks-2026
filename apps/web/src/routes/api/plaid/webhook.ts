@@ -1,4 +1,5 @@
 import * as activity from "@steelhacks-2026/api/services/activity";
+import { runBudgetCheck, runFraudCheck } from "@steelhacks-2026/api/services/notifications";
 import { bankConnection } from "@steelhacks-2026/db/schema/index";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
@@ -43,8 +44,23 @@ export const Route = createFileRoute("/api/plaid/webhook")({
                 removed: result.removed,
               },
             });
+            // Fraud/budget checks run on every sync with new transactions.
+            // Awaited (not fire-and-forget) so they actually finish on
+            // serverless, but errors never fail the webhook ack to Plaid.
+            if (result.added.length > 0) {
+              const [fraud, budgets] = await Promise.allSettled([
+                runFraudCheck(db, connection.memberId),
+                runBudgetCheck(db, connection.memberId),
+              ]);
+              if (fraud.status === "rejected") {
+                console.error("plaid webhook: fraud check failed", fraud.reason);
+              }
+              if (budgets.status === "rejected") {
+                console.error("plaid webhook: budget check failed", budgets.reason);
+              }
+            }
             // TODO(alerts service): alerts.evaluate(connection.memberId) once it exists,
-            // so a new transaction can trigger a shortfall/unusual-txn call.
+            // so a new transaction can also trigger a shortfall/unusual-txn call.
           }
         }
 
