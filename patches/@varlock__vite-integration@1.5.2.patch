@@ -1,0 +1,35 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 04626bfb108e975cd7af304458a2b67f4b340c49..063078303221a6d8005e45639a3e964aa5b6532d 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1537,12 +1537,14 @@ function reloadConfig(cwd) {
+ 		lastErrorAt = 0;
+ 		configIsValid = true;
+ 	} catch (err) {
++		let recoveredFromCrash = false;
+ 		if (err instanceof VarlockExecError) {
+ 			if (err.stdout) try {
+ 				varlockLoadedEnv = JSON.parse(err.stdout);
+ 				process.env.__VARLOCK_ENV = err.stdout;
++				recoveredFromCrash = true;
+ 			} catch {}
+-			if (err.stderr) {
++			if (err.stderr && !recoveredFromCrash) {
+ 				const now = Date.now();
+ 				const isDuplicate = err.stderr === varlockLastError && now - lastErrorAt < 5e3;
+ 				varlockLastError = err.stderr;
+@@ -1553,7 +1555,13 @@ function reloadConfig(cwd) {
+ 				}
+ 			}
+ 		}
+-		configIsValid = false;
++		if (recoveredFromCrash) {
++			varlockLastError = void 0;
++			lastErrorAt = 0;
++			configIsValid = true;
++		} else {
++			configIsValid = false;
++		}
+ 		resetStaticReplacements();
+ 		return;
+ 	}

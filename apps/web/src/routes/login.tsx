@@ -1,8 +1,10 @@
 import { Button } from "@steelhacks-2026/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@steelhacks-2026/ui/components/card";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import Header from "@/components/header";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/login")({
@@ -33,12 +35,21 @@ function RouteComponent() {
   }
 
   return (
-    <div className="mx-auto mt-24 flex w-full max-w-sm flex-col items-center gap-4 p-6 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">Caretaker demo</h1>
-      <p className="text-muted-foreground text-sm">Signs you in as Maria, Dot&apos;s caretaker.</p>
-      <Button className="w-full" onClick={signIn} disabled={isSigningIn}>
-        {isSigningIn ? "Signing in..." : "Sign In"}
-      </Button>
+    <div className="flex min-h-svh flex-col bg-background">
+      <Header />
+      <div className="flex flex-1 items-center justify-center p-6">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Caretaker demo</CardTitle>
+            <p className="text-muted-foreground text-sm">Signs you in as Maria, Dot&apos;s caretaker.</p>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" onClick={signIn} disabled={isSigningIn}>
+              {isSigningIn ? "Signing in..." : "Sign In"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

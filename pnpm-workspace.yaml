@@ -7,7 +7,7 @@ allowBuilds:
 catalog:
   zod: ^4.5.4
   "@types/node": ^26.4.1
-  varlock: 1.18.0
+  varlock: 1.20.0
   "@tanstack/react-query": ^5.102.8
   lucide-react: ^1.41.0
   next-themes: ^0.4.6
@@ -41,3 +41,5 @@ minimumReleaseAgeExclude:
   - '@orpc/tanstack-query@1.15.2'
   - '@orpc/zod@1.15.2'
   - 'copy-anything@4.1.1'
+patchedDependencies:
+  '@varlock/vite-integration@1.5.2': patches/@varlock__vite-integration@1.5.2.patch

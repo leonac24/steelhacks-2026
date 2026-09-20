@@ -9,7 +9,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { formatCents, formatIsoDate } from "@/lib/format";
 
 const config = {
-  balanceCents: { label: "Balance", color: "var(--chart-2)" },
+  balanceCents: { label: "Balance", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 export function BalanceChart({ data }: { data: { date: string; balanceCents: number }[] }) {
@@ -18,8 +18,13 @@ export function BalanceChart({ data }: { data: { date: string; balanceCents: num
       <AreaChart data={data} margin={{ left: 8, right: 8, top: 8 }}>
         <defs>
           <linearGradient id="balanceFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-balanceCents)" stopOpacity={0.35} />
+            <stop offset="5%" stopColor="var(--color-balanceCents)" stopOpacity={0.4} />
+            <stop offset="60%" stopColor="var(--color-balanceCents)" stopOpacity={0.12} />
             <stop offset="95%" stopColor="var(--color-balanceCents)" stopOpacity={0.02} />
+          </linearGradient>
+          <linearGradient id="balanceStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#b45309" />
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -50,8 +55,8 @@ export function BalanceChart({ data }: { data: { date: string; balanceCents: num
           dataKey="balanceCents"
           type="monotone"
           fill="url(#balanceFill)"
-          stroke="var(--color-balanceCents)"
-          strokeWidth={2}
+          stroke="url(#balanceStroke)"
+          strokeWidth={2.5}
         />
       </AreaChart>
     </ChartContainer>
