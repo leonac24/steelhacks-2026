@@ -1,12 +1,11 @@
-import type { ElevenLabsConfig } from "@steelhacks-2026/api/services/outbound-calls";
+import type { ElevenLabsCallEnv } from "@steelhacks-2026/api/services/outbound-calls";
 
 import { ENV } from "../env.server";
 
-// Null unless all three are set, so the alerts engine falls back to logging.
-export function elevenLabsConfig(): ElevenLabsConfig | null {
-  const apiKey = ENV.ELEVENLABS_API_KEY;
-  const agentId = ENV.ELEVENLABS_AGENT_ID;
-  const agentPhoneNumberId = ENV.ELEVENLABS_AGENT_PHONE_NUMBER_ID;
-  if (!apiKey || !agentId || !agentPhoneNumberId) return null;
-  return { apiKey, agentId, agentPhoneNumberId };
+// Undefined unless all three are set, so the alerts engine never dials
+// without credentials.
+export function elevenLabsConfig(): ElevenLabsCallEnv | undefined {
+  const { ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID, ELEVENLABS_PHONE_NUMBER_ID } = ENV;
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_AGENT_ID || !ELEVENLABS_PHONE_NUMBER_ID) return undefined;
+  return { ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID, ELEVENLABS_PHONE_NUMBER_ID };
 }

@@ -1,0 +1,180 @@
+{
+  "tools": [
+    {
+      "type": "webhook",
+      "name": "verify_pin",
+      "description": "Verify the member's spoken PIN. MUST succeed before any other tool is used. Ask the member to say their PIN, then call this with the digits.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/verify_pin",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id", "pin"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" },
+            "pin": { "type": "string", "description": "The PIN digits the member spoke, digits only, e.g. \"1234\"." }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "get_balance",
+      "description": "Get the member's available balance and safe-to-spend amount. Call only after verify_pin succeeded.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/get_balance",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "get_upcoming_bills",
+      "description": "List the member's upcoming bills, whether each is covered, and their next income. Call only after verify_pin succeeded.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/get_upcoming_bills",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "get_recent_transactions",
+      "description": "List the member's recent transactions, non-pending first. Pass the returned transaction_id to flag_transaction for a charge the member doesn't recognize.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/get_recent_transactions",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" },
+            "limit": { "type": "integer", "description": "How many to list, 1–10. Default 5." }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "check_affordability",
+      "description": "Check whether the member can afford a proposed purchase before the next income, without touching their safety cushion.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/check_affordability",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id", "amount_dollars"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" },
+            "amount_dollars": { "type": "number", "description": "The amount in dollars the member asked about, e.g. 60 for sixty dollars." }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "get_budgets",
+      "description": "List the member's budget categories with the monthly limit and how much they've spent so far this month.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/get_budgets",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "propose_change",
+      "description": "Start a member-requested change (budget, reminders, quiet hours, alert rules, safety buffer, trusted contact). Read the returned summary back and never apply anything until the member clearly says yes, then call confirm_change.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/propose_change",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id", "change_type", "payload"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" },
+            "change_type": {
+              "type": "string",
+              "enum": ["budget_update", "reminder_mode_update", "quiet_hours_update", "alert_rule_toggle", "safety_buffer_update", "trusted_contact_update"],
+              "description": "Which kind of change the member wants."
+            },
+            "payload": {
+              "type": "object",
+              "description": "Shape depends on change_type. budget_update: { \"category\": \"groceries\", \"monthlyLimitCents\": 30000 } (monthlyLimitCents in cents). reminder_mode_update: { \"reminderMode\": \"call\" | \"sms\" | \"off\" }. quiet_hours_update: { \"start\": \"20:00\", \"end\": \"09:00\" } (24-hour HH:MM). alert_rule_toggle: { \"type\": \"shortfall\" | \"bill_due_unfunded\" | \"unusual_txn\" | \"deposit_arrived\", \"enabled\": true }. safety_buffer_update: { \"safetyBufferCents\": 10000 }. trusted_contact_update: { \"name\": \"Maria\", \"phoneE164\": \"+14125550123\", \"relationship\": \"daughter\" }."
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "confirm_change",
+      "description": "Confirm a change previously proposed with propose_change. Call ONLY after the member unambiguously said yes.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/confirm_change",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id", "confirmation_id"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" },
+            "confirmation_id": { "type": "string", "description": "The confirmation_id returned by propose_change, verbatim." }
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "name": "flag_transaction",
+      "description": "Flag a transaction the member reports as unrecognized, notify their family, and warn them about scams. Use the transaction_id from get_recent_transactions.",
+      "response_timeout_secs": 20,
+      "api_schema": {
+        "url": "{{BASE_URL}}/api/elevenlabs/tools/flag_transaction",
+        "method": "POST",
+        "request_headers": { "x-voice-secret": "{{TOOL_SECRET}}" },
+        "request_body_schema": {
+          "type": "object",
+          "required": ["conversation_id", "transaction_id"],
+          "properties": {
+            "conversation_id": { "type": "string", "dynamic_variable": "system__conversation_id" },
+            "transaction_id": { "type": "string", "description": "The transaction_id from get_recent_transactions for the charge the member doesn't recognize." }
+          }
+        }
+      }
+    }
+  ]
+}

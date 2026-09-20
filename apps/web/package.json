@@ -9,7 +9,8 @@
     "check-types": "tsc -b ../../packages/api && vite build && tsc --noEmit",
     "env:generate": "varlock codegen",
     "auth:generate": "varlock run -- pnpm dlx auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes",
-    "db:seed": "varlock run -- tsx scripts/seed.ts"
+    "db:seed": "varlock run -- tsx scripts/seed.ts",
+    "sync:agent": "varlock run -- tsx scripts/sync-agent.ts"
   },
   "dependencies": {
     "@orpc/client": "catalog:",

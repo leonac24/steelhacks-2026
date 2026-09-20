@@ -1,224 +1,362 @@
-// Decides what a member should be told about, and calls them if we're allowed.
+// Proactive alert evaluation + outbound calling, split into a pure evaluator
+// (evaluateAlertConditions) and the IO that persists/places calls. Mirrors the
+// computeCashPicture split in member-summary so the pure part is testable.
 import type { Database } from "@steelhacks-2026/db";
 import {
   alertRule,
+  alertRuleType,
   alertSent,
   member,
   memberSettings,
+  recurringStream,
   transaction,
 } from "@steelhacks-2026/db/schema/index";
-import { localTimeInTimezone, todayInTimezone } from "@steelhacks-2026/finance";
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
-
-import type { BankDataProvider } from "../providers";
-import * as activity from "./activity";
 import {
-  buildCandidates,
-  byPriority,
-  checkDelivery,
-  type AlertCandidate,
-  type AlertRuleConfig,
-  type AlertRuleType,
-} from "./alert-rules";
-import { memberSummary } from "./member-summary";
-import { notifyCaretakers } from "./notify";
-import * as outboundCalls from "./outbound-calls";
-import type { ElevenLabsConfig } from "./outbound-calls";
+  addDays,
+  formatCentsForSpeech,
+  isUnusualTransaction,
+  todayInTimezone,
+  type IsoDate,
+  type TxnLike,
+} from "@steelhacks-2026/finance";
+import { and, eq, inArray } from "drizzle-orm";
 
-// How much spending history counts as "normal for this member".
-const HISTORY_LIMIT = 200;
+import type { TransactionRow } from "../providers/types";
+import * as activity from "./activity";
+import { startOutboundSession } from "./call-sessions";
+import { memberSummary, type MemberSummary } from "./member-summary";
+import type { PlaceCallFn } from "./outbound-calls";
 
-export type NewTransaction = {
-  id: string;
-  amountCents: number;
-  merchantName: string | null;
-  date: string;
+export type AlertRuleType = (typeof alertRuleType.enumValues)[number];
+
+export type AlertCandidate = {
+  ruleType: AlertRuleType;
+  dedupeKey: string;
+  // Outbound first_message override. No amounts or merchant names before PIN.
+  firstMessage: string;
+  // call_reason, identified, member_preferred_name, call_direction, alert_detail
+  dynamicVariables: Record<string, string>;
 };
 
-// Everything we'd alert about, minus what we've already sent.
-export async function evaluate(
-  db: Database,
-  memberId: string,
-  options: { newTransactions?: NewTransaction[]; now?: Date } = {},
-): Promise<AlertCandidate[]> {
-  const now = options.now ?? new Date();
-  const newTransactions = options.newTransactions ?? [];
+export const RULE_LABELS: Record<AlertRuleType, string> = {
+  shortfall: "a possible shortfall",
+  bill_due_unfunded: "a bill due soon",
+  unusual_txn: "an unusual charge",
+  deposit_arrived: "a deposit that arrived",
+};
 
-  const [target, summary, rules, history] = await Promise.all([
-    db.query.member.findFirst({ where: eq(member.id, memberId) }),
-    memberSummary(db, memberId, now),
-    db.select().from(alertRule).where(eq(alertRule.memberId, memberId)),
-    db
-      .select({
-        id: transaction.id,
-        amountCents: transaction.amountCents,
-        merchantName: transaction.merchantName,
-      })
-      .from(transaction)
-      .where(eq(transaction.memberId, memberId))
-      .orderBy(desc(transaction.date))
-      .limit(HISTORY_LIMIT),
-  ]);
-  if (!target) throw new Error(`Member ${memberId} not found`);
+const CALL_REASON: Record<AlertRuleType, string> = {
+  shortfall: "shortfall_warning",
+  bill_due_unfunded: "bill_due_unfunded",
+  unusual_txn: "unusual_transaction",
+  deposit_arrived: "deposit_arrived",
+};
 
-  const ruleMap: Partial<Record<AlertRuleType, AlertRuleConfig>> = {};
-  for (const rule of rules) {
-    ruleMap[rule.type] = { enabled: rule.enabled, thresholdCents: rule.thresholdCents };
+function buildFirstMessage(ruleType: AlertRuleType, name: string): string {
+  switch (ruleType) {
+    case "shortfall":
+      return `Hi ${name}, it's June with a heads-up about your money — but first, could you tell me your PIN?`;
+    case "bill_due_unfunded":
+      return `Hi ${name}, it's June about a bill that's coming due — but first, could you tell me your PIN?`;
+    case "unusual_txn":
+      return `Hi ${name}, it's June about a charge on your account I want to check with you — but first, could you tell me your PIN?`;
+    case "deposit_arrived":
+      return `Hi ${name}, it's June with some good news about a deposit — but first, could you tell me your PIN?`;
+  }
+}
+
+type UpcomingBillStream = {
+  id: string;
+  name: string;
+  averageAmountCents: number;
+  nextExpectedDate: IsoDate | null;
+};
+
+type EvaluatorInput = {
+  memberId: string;
+  preferredName: string;
+  today: IsoDate;
+  summary: Pick<
+    MemberSummary,
+    "availableBalanceCents" | "safeToSpendCents" | "shortfall" | "upcomingBills" | "nextIncome"
+  >;
+  upcomingBillStreams: UpcomingBillStream[];
+  recentTransactions: TransactionRow[];
+  historyTransactions: TxnLike[];
+  rules: Array<{ type: AlertRuleType; enabled: boolean; thresholdCents: number | null }>;
+};
+
+export function evaluateAlertConditions(input: EvaluatorInput): AlertCandidate[] {
+  const ruleMap = new Map(input.rules.map((r) => [r.type, r]));
+  const enabled = (type: AlertRuleType) => ruleMap.get(type)?.enabled === true;
+  const thresholdFor = (type: AlertRuleType) => ruleMap.get(type)?.thresholdCents ?? null;
+
+  const base = {
+    identified: "yes",
+    member_preferred_name: input.preferredName,
+    call_direction: "outbound",
+  };
+  const makeVariables = (ruleType: AlertRuleType, alertDetail: string): Record<string, string> => ({
+    ...base,
+    call_reason: CALL_REASON[ruleType],
+    alert_detail: alertDetail,
+  });
+
+  const candidates: AlertCandidate[] = [];
+
+  if (enabled("shortfall") && input.summary.shortfall.willShortfall) {
+    const incomeDate = input.summary.nextIncome?.date ?? input.summary.shortfall.date;
+    const amount = formatCentsForSpeech(input.summary.shortfall.shortfallCents);
+    const income = input.summary.nextIncome?.name ?? "deposit";
+    const detail = `You may be short about ${amount} before your next ${income}${
+      incomeDate ? ` on ${incomeDate}` : ""
+    }.`;
+    candidates.push({
+      ruleType: "shortfall",
+      dedupeKey: `${input.memberId}:shortfall:${incomeDate}`,
+      firstMessage: buildFirstMessage("shortfall", input.preferredName),
+      dynamicVariables: makeVariables("shortfall", detail),
+    });
   }
 
-  const newIds = new Set(newTransactions.map((t) => t.id));
-  const candidates = buildCandidates({
-    memberId,
-    preferredName: target.preferredName,
-    today: summary.today,
-    shortfall: summary.shortfall,
-    upcomingBills: summary.upcomingBills,
-    newTransactions,
-    // Don't let the new transactions count as their own precedent.
-    transactionHistory: history.filter((t) => !newIds.has(t.id)),
-    rules: ruleMap,
-  });
-  if (candidates.length === 0) return [];
+  if (enabled("bill_due_unfunded")) {
+    const horizon = addDays(input.today, 7);
+    for (const stream of input.upcomingBillStreams) {
+      if (
+        stream.nextExpectedDate !== null &&
+        stream.nextExpectedDate >= input.today &&
+        stream.nextExpectedDate <= horizon &&
+        input.summary.availableBalanceCents < stream.averageAmountCents
+      ) {
+        const detail = `The ${stream.name} bill of ${formatCentsForSpeech(
+          stream.averageAmountCents,
+        )} is due ${stream.nextExpectedDate} and your balance may not cover it.`;
+        candidates.push({
+          ruleType: "bill_due_unfunded",
+          dedupeKey: `${input.memberId}:bill:${stream.id}:${stream.nextExpectedDate}`,
+          firstMessage: buildFirstMessage("bill_due_unfunded", input.preferredName),
+          dynamicVariables: makeVariables("bill_due_unfunded", detail),
+        });
+      }
+    }
+  }
 
-  const seen = await db
-    .select({ dedupeKey: alertSent.dedupeKey })
+  if (enabled("unusual_txn")) {
+    const largeFloorCents = thresholdFor("unusual_txn") ?? 10_000;
+    for (const txn of input.recentTransactions) {
+      if (txn.amountCents <= 0) continue;
+      const result = isUnusualTransaction(txn, input.historyTransactions, { largeFloorCents });
+      if (!result.unusual) continue;
+      const detail = `A ${formatCentsForSpeech(txn.amountCents)} charge at ${
+        txn.merchantName ?? "a place you've shopped"
+      } on ${txn.date} looks unusual.`;
+      candidates.push({
+        ruleType: "unusual_txn",
+        dedupeKey: `${input.memberId}:unusual:${txn.id}`,
+        firstMessage: buildFirstMessage("unusual_txn", input.preferredName),
+        dynamicVariables: makeVariables("unusual_txn", detail),
+      });
+    }
+  }
+
+  if (enabled("deposit_arrived")) {
+    for (const txn of input.recentTransactions) {
+      if (txn.amountCents >= 0) continue;
+      const detail = `A deposit of ${formatCentsForSpeech(-txn.amountCents)}${
+        txn.merchantName ? ` from ${txn.merchantName}` : ""
+      } arrived on ${txn.date}.`;
+      candidates.push({
+        ruleType: "deposit_arrived",
+        dedupeKey: `${input.memberId}:deposit:${txn.id}`,
+        firstMessage: buildFirstMessage("deposit_arrived", input.preferredName),
+        dynamicVariables: makeVariables("deposit_arrived", detail),
+      });
+    }
+  }
+
+  return candidates;
+}
+
+// "20:00" → within 20:00–09:00 is true; a window that wraps midnight.
+export function isWithinQuietHours(localTime: string, start: string, end: string): boolean {
+  const toMinutes = (t: string) => {
+    const [h = 0, m = 0] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const t = toMinutes(localTime);
+  const s = toMinutes(start);
+  const e = toMinutes(end);
+  if (s === e) return false;
+  if (s < e) return t >= s && t < e;
+  return t >= s || t < e;
+}
+
+export type AlertRunStats = {
+  evaluated: number;
+  placed: number;
+  skipped: number;
+  deduped: number;
+  failed: number;
+};
+
+function localTimeOfDay(timezone: string, now: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
+}
+
+async function countCallsToday(
+  db: Database,
+  memberId: string,
+  today: IsoDate,
+  timezone: string,
+): Promise<number> {
+  const rows = await db
+    .select({ sentAt: alertSent.sentAt })
     .from(alertSent)
     .where(
-      and(
-        eq(alertSent.memberId, memberId),
-        inArray(
-          alertSent.dedupeKey,
-          candidates.map((c) => c.dedupeKey),
-        ),
-      ),
+      and(eq(alertSent.memberId, memberId), inArray(alertSent.status, ["placed", "answered", "unanswered"])),
     );
-  const alreadySent = new Set(seen.map((row) => row.dedupeKey));
-  return candidates.filter((c) => !alreadySent.has(c.dedupeKey)).sort(byPriority);
+  return rows.filter((r) => todayInTimezone(timezone, r.sentAt) === today).length;
 }
 
-export type DispatchResult = {
-  placed: number;
-  skipped: { dedupeKey: string; reason: string }[];
-  candidates: number;
-};
-
-// Calls the member about the most urgent alerts, respecting quiet hours,
-// their daily call cap, and reminder mode.
-export async function dispatch(
+export async function runAlertsForMember(
   db: Database,
+  placeCall: PlaceCallFn,
   memberId: string,
-  options: {
-    candidates?: AlertCandidate[];
-    newTransactions?: NewTransaction[];
-    elevenLabs?: ElevenLabsConfig | null;
-    now?: Date;
-  } = {},
-): Promise<DispatchResult> {
-  const now = options.now ?? new Date();
-  const candidates = options.candidates ?? (await evaluate(db, memberId, { ...options, now }));
-  const skipped: { dedupeKey: string; reason: string }[] = [];
-  if (candidates.length === 0) return { placed: 0, skipped, candidates: 0 };
+  now: Date = new Date(),
+): Promise<AlertRunStats> {
+  const m = await db.query.member.findFirst({ where: eq(member.id, memberId) });
+  const stats: AlertRunStats = { evaluated: 0, placed: 0, skipped: 0, deduped: 0, failed: 0 };
+  if (!m) return stats;
 
-  const [target, settings] = await Promise.all([
-    db.query.member.findFirst({ where: eq(member.id, memberId) }),
+  const today = todayInTimezone(m.timezone, now);
+
+  const [summary, settings, rules, billStreams, txns] = await Promise.all([
+    memberSummary(db, memberId, now),
     db.query.memberSettings.findFirst({ where: eq(memberSettings.memberId, memberId) }),
+    db.select().from(alertRule).where(eq(alertRule.memberId, memberId)),
+    db
+      .select()
+      .from(recurringStream)
+      .where(and(eq(recurringStream.memberId, memberId), eq(recurringStream.kind, "bill"))),
+    db
+      .select()
+      .from(transaction)
+      .where(and(eq(transaction.memberId, memberId), eq(transaction.pending, false))),
   ]);
-  if (!target || !settings) throw new Error(`Member ${memberId} is not fully set up`);
 
-  const today = todayInTimezone(target.timezone, now);
-  const startOfLocalDay = new Date(`${today}T00:00:00Z`);
-  const placedToday = await db
-    .select({ id: alertSent.id })
-    .from(alertSent)
-    .where(and(eq(alertSent.memberId, memberId), gte(alertSent.sentAt, startOfLocalDay)));
+  const threeDaysAgo = addDays(today, -3);
+  const ninetyDaysAgo = addDays(today, -90);
+  const recentTransactions = txns.filter((t) => t.date >= threeDaysAgo);
+  const historyTransactions: TxnLike[] = txns
+    .filter((t) => t.date >= ninetyDaysAgo)
+    .map((t) => ({ amountCents: t.amountCents, merchantName: t.merchantName }));
 
-  let callsPlacedToday = placedToday.length;
-  let placed = 0;
+  const candidates = evaluateAlertConditions({
+    memberId,
+    preferredName: m.preferredName,
+    today,
+    summary,
+    upcomingBillStreams: billStreams.map((s) => ({
+      id: s.id,
+      name: s.name,
+      averageAmountCents: s.averageAmountCents,
+      nextExpectedDate: s.nextExpectedDate,
+    })),
+    recentTransactions,
+    historyTransactions,
+    rules: rules.map((r) => ({ type: r.type, enabled: r.enabled, thresholdCents: r.thresholdCents })),
+  });
+  stats.evaluated = candidates.length;
+
+  const maxCallsPerDay = settings?.maxCallsPerDay ?? 2;
+  const localHHMM = localTimeOfDay(m.timezone, now);
+  let callsToday = await countCallsToday(db, memberId, today, m.timezone);
 
   for (const candidate of candidates) {
-    const decision = checkDelivery({
-      localTime: localTimeInTimezone(target.timezone, now),
-      quietHoursStart: settings.quietHoursStart,
-      quietHoursEnd: settings.quietHoursEnd,
-      callsPlacedToday,
-      maxCallsPerDay: settings.maxCallsPerDay,
-      reminderMode: settings.reminderMode,
-    });
-
-    if (!decision.deliver) {
-      // Not recorded as sent, so we can try again once it's allowed.
-      skipped.push({ dedupeKey: candidate.dedupeKey, reason: decision.reason });
-      continue;
-    }
-    if (decision.channel === "sms") {
-      // TODO: send SMS via Twilio once we have credentials.
-      skipped.push({ dedupeKey: candidate.dedupeKey, reason: "sms_not_implemented" });
-      continue;
-    }
-
-    const call = await outboundCalls.place(
-      db,
-      target,
-      candidate,
-      options.elevenLabs ?? null,
-      settings.voiceSpeed,
-    );
-    await db.insert(alertSent).values({
-      memberId,
-      ruleType: candidate.ruleType,
-      dedupeKey: candidate.dedupeKey,
-      channel: "call",
-      status: call.simulated ? "queued" : "placed",
-      callSessionId: call.callSessionId,
-      sentAt: now,
-    });
-    await activity.log(db, {
-      memberId,
-      type: "alert_sent",
-      summaryText: call.simulated
-        ? `Would call ${target.preferredName}: ${candidate.summaryText}`
-        : `Called ${target.preferredName}: ${candidate.summaryText}`,
-      metadata: {
+    const [alertRow] = await db
+      .insert(alertSent)
+      .values({
+        memberId,
         ruleType: candidate.ruleType,
-        callSessionId: call.callSessionId,
-        simulated: call.simulated,
-      },
-    });
-    if (candidate.ruleType === "unusual_txn") {
-      await notifyCaretakers(db, memberId, candidate.summaryText);
+        dedupeKey: candidate.dedupeKey,
+        channel: "call",
+        status: "queued",
+      })
+      .onConflictDoNothing()
+      .returning({ id: alertSent.id });
+    if (!alertRow) {
+      stats.deduped++;
+      continue;
     }
 
-    callsPlacedToday++;
-    placed++;
+    if (settings?.reminderMode !== "call") {
+      await db.update(alertSent).set({ status: "skipped" }).where(eq(alertSent.id, alertRow.id));
+      stats.skipped++;
+      continue;
+    }
+    if (
+      settings &&
+      isWithinQuietHours(localHHMM, settings.quietHoursStart, settings.quietHoursEnd)
+    ) {
+      await db.update(alertSent).set({ status: "skipped" }).where(eq(alertSent.id, alertRow.id));
+      stats.skipped++;
+      continue;
+    }
+    if (callsToday >= maxCallsPerDay) {
+      await db.update(alertSent).set({ status: "skipped" }).where(eq(alertSent.id, alertRow.id));
+      stats.skipped++;
+      continue;
+    }
+
+    try {
+      const { conversationId, callSid } = await placeCall({
+        toNumber: m.phoneE164,
+        dynamicVariables: candidate.dynamicVariables,
+        firstMessage: candidate.firstMessage,
+      });
+      if (!conversationId) throw new Error("ElevenLabs returned no conversation_id");
+      const session = await startOutboundSession(db, {
+        memberId,
+        conversationId,
+        twilioCallSid: callSid,
+      });
+      await db
+        .update(alertSent)
+        .set({ status: "placed", callSessionId: session.id })
+        .where(eq(alertSent.id, alertRow.id));
+      await activity.log(db, {
+        memberId,
+        type: "alert_sent",
+        summaryText: `June called ${m.preferredName} about ${RULE_LABELS[candidate.ruleType]}.`,
+        metadata: { alertId: alertRow.id, callSessionId: session.id },
+        visibleToCaretaker: true,
+      });
+      stats.placed++;
+      callsToday++;
+    } catch (error) {
+      console.error(`[alerts] failed to place call for ${memberId}`, error);
+      await db.update(alertSent).set({ status: "failed" }).where(eq(alertSent.id, alertRow.id));
+      stats.failed++;
+    }
   }
 
-  return { placed, skipped, candidates: candidates.length };
+  return stats;
 }
 
-// Used by the daily cron: syncs each member's bank, then calls about anything
-// worth calling about.
-export async function dispatchAll(
+export async function runAlertsForAllMembers(
   db: Database,
-  options: {
-    elevenLabs?: ElevenLabsConfig | null;
-    // Pass the app's configured provider to pick up new transactions first.
-    bankProvider?: BankDataProvider;
-    now?: Date;
-  } = {},
-) {
+  placeCall: PlaceCallFn,
+  now: Date = new Date(),
+): Promise<Record<string, AlertRunStats>> {
   const members = await db.select({ id: member.id }).from(member);
-  const results = [];
-  for (const row of members) {
-    try {
-      const newTransactions: NewTransaction[] = options.bankProvider
-        ? (await options.bankProvider.syncTransactions(row.id)).added
-        : [];
-      const result = await dispatch(db, row.id, { ...options, newTransactions });
-      results.push({ memberId: row.id, ...result });
-    } catch (error) {
-      console.error(`[alerts] member ${row.id} failed:`, error);
-      results.push({ memberId: row.id, placed: 0, candidates: 0, error: true });
-    }
+  const result: Record<string, AlertRunStats> = {};
+  for (const m of members) {
+    result[m.id] = await runAlertsForMember(db, placeCall, m.id, now);
   }
-  return results;
+  return result;
 }

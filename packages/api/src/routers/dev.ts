@@ -5,9 +5,10 @@ import { z } from "zod";
 import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
-import * as alerts from "../services/alerts";
+import { runAlertsForMember } from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
+import { createElevenLabsPlaceCall } from "../services/outbound-calls";
 
 async function checkAfterNewTransactions(
   db: Parameters<typeof runFraudCheck>[0],
@@ -23,6 +24,16 @@ async function checkAfterNewTransactions(
   if (fraud.status === "rejected") console.error(`${source}: fraud check failed`, fraud.reason);
   if (budgets.status === "rejected")
     console.error(`${source}: budget check failed`, budgets.reason);
+}
+
+function placeCallFor(context: { elevenLabsEnv?: import("../services/outbound-calls").ElevenLabsCallEnv }) {
+  if (!context.elevenLabsEnv) {
+    throw new ORPCError("PRECONDITION_FAILED", {
+      message:
+        "ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID, and ELEVENLABS_PHONE_NUMBER_ID must be set",
+    });
+  }
+  return createElevenLabsPlaceCall(context.elevenLabsEnv);
 }
 
 export const devRouter = {
@@ -83,22 +94,18 @@ export const devRouter = {
         ? await context.injectPlaidTransaction(input)
         : await injectMockTransaction(context.db, input);
 
-      // Two independent notification channels off the same new transactions:
-      // the rule-based alerts engine (may place a voice call), and Gemini
-      // fraud + budget-pace checks (land on the caretaker's dashboard/email).
-      const [dispatched] = await Promise.all([
-        alerts.dispatch(context.db, input.memberId, {
-          newTransactions: sync.added,
-          elevenLabs: context.elevenLabs,
-        }),
-        checkAfterNewTransactions(
-          context.db,
-          input.memberId,
-          sync.added.length,
-          "dev.injectTransaction",
-        ),
-      ]);
-      return { ...sync, ...dispatched };
+      const alerts = context.elevenLabsEnv
+        ? await runAlertsForMember(context.db, placeCallFor(context), input.memberId)
+        : undefined;
+
+      // Fraud + budget checks are independent of the voice engine.
+      await checkAfterNewTransactions(
+        context.db,
+        input.memberId,
+        sync.added.length,
+        "dev.injectTransaction",
+      );
+      return { ...sync, alerts };
     }),
 
   // Syncs the bank, then calls about anything worth calling about.
@@ -107,15 +114,31 @@ export const devRouter = {
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
       const provider = createBankProvider(context.db, context.bankProvider);
-      const sync = await provider.syncTransactions(input.memberId);
-      return alerts.dispatch(context.db, input.memberId, {
-        newTransactions: sync.added,
-        elevenLabs: context.elevenLabs,
-      });
+      await provider.syncTransactions(input.memberId);
+      return runAlertsForMember(context.db, placeCallFor(context), input.memberId);
     }),
 
   // Settles every overdue approval now instead of waiting for cron.
   processApprovals: devProcedure.handler(({ context }) =>
     changeRequests.processTimeouts(context.db),
   ),
+
+  // The demo's "simulate the call" button. Not wired yet — the real path is
+  // June's propose_change / confirm_change voice tools, which need a live
+  // call session, so this stands in with a clear error until it's built.
+  simulateVoiceChange: devProcedure
+    .input(
+      z.object({
+        memberId: z.string(),
+        changeType: z.string(),
+        payload: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .use(requirePrimaryCaretaker)
+    .handler(async (): Promise<{ status: "applied" | "awaiting_approval"; summaryText: string }> => {
+      throw new ORPCError("NOT_IMPLEMENTED", {
+        message:
+          "Voice change simulation isn't wired yet — place a real call and use June's voice tools.",
+      });
+    }),
 };
