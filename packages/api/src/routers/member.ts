@@ -3,9 +3,14 @@ import { activityLog, caretakerLink, user } from "@steelhacks-2026/db/schema/ind
 import { and, desc, eq } from "drizzle-orm";
 
 import { memberProcedure } from "../index";
+import { budgetsOverview } from "../services/budgets";
 import { memberSummary } from "../services/member-summary";
 
 export const memberRouter = {
+  // Read-only: the member sees their limits but changes them by phone, where
+  // the change-request flow applies.
+  budgets: memberProcedure.handler(({ context }) => budgetsOverview(context.db, context.member.id)),
+
   summary: memberProcedure.handler(({ context }) => memberSummary(context.db, context.member.id)),
 
   bills: memberProcedure.handler(async ({ context }) => {
