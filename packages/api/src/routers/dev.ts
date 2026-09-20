@@ -1,6 +1,5 @@
 // Buttons for the live demo. Only mounted when dev tools are enabled.
 import { ORPCError } from "@orpc/server";
-import { changeType as changeTypeEnum } from "@steelhacks-2026/db/schema/enums";
 import { z } from "zod";
 
 import { devProcedure, requirePrimaryCaretaker } from "../index";

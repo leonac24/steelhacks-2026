@@ -18,7 +18,7 @@ import { formatCents, formatIsoDate, formatSignedCents } from "@/lib/format";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth/dashboard")({
-  component: DashboardRoute,
+  component: RouteComponent,
 });
 
 function RouteComponent() {
