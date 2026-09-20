@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { id, timestamps } from "./columns";
@@ -20,6 +20,8 @@ export const member = pgTable(
     // shared phone number across members is only ambiguous for that path.
     phoneE164: text("phone_e164").notNull(),
     pinHash: text("pin_hash").notNull(),
+    // Optional; collected on sign-up but never required.
+    age: integer("age"),
     timezone: text("timezone").notNull().default("America/New_York"),
     language: text("language").notNull().default("en"),
     ...timestamps(),

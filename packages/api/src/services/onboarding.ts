@@ -30,6 +30,7 @@ const publicMemberColumns = {
   fullName: member.fullName,
   preferredName: member.preferredName,
   phoneE164: member.phoneE164,
+  age: member.age,
   timezone: member.timezone,
   language: member.language,
   createdAt: member.createdAt,
@@ -52,6 +53,8 @@ export type CreateMemberInput = {
   phoneE164: string;
   pin: string;
   timezone: string;
+  // Optional; collected on sign-up but never required.
+  age?: number | null;
   // The member has to agree before a caretaker can watch their money.
   consented: boolean;
 };
@@ -72,6 +75,7 @@ export async function createMember(db: Database, input: CreateMemberInput): Prom
         preferredName: input.preferredName,
         phoneE164: input.phoneE164,
         pinHash: await hashPin(input.pin),
+        age: input.age ?? null,
         timezone: input.timezone,
       })
       .returning(publicMemberColumns),

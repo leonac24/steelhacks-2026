@@ -217,6 +217,12 @@ export const devRouter = {
         connectDemoBank: z.boolean().default(false),
         // Collected so we can eventually call the person testing the demo.
         phone: z.string().min(1, "A phone number is required"),
+        // Falls back to a random demo name if left blank (e.g. an older
+        // client that hasn't been updated to send it yet).
+        name: z.string().trim().min(1).optional(),
+        age: z.number().int().min(1).max(120).optional(),
+        nesterName: z.string().trim().min(1).optional(),
+        nesterAge: z.number().int().min(1).max(120).optional(),
       }),
     )
     .handler(async ({ input, context }) => {
@@ -235,15 +241,20 @@ export const devRouter = {
       const suffix = crypto.randomUUID().slice(0, 8);
       const email = `demo-${suffix}@nestegg.dev`;
       const password = "demo-password-123";
-      const stewardName = DEMO_STEWARDS[Math.floor(Math.random() * DEMO_STEWARDS.length)]!;
+      const stewardName =
+        input.name ?? DEMO_STEWARDS[Math.floor(Math.random() * DEMO_STEWARDS.length)]!;
       const newUser = await context.createUser({ name: stewardName, email, password });
-      await context.db.update(user).set({ phone }).where(eq(user.id, newUser.id));
+      await context.db
+        .update(user)
+        .set({ phone, age: input.age ?? null })
+        .where(eq(user.id, newUser.id));
 
       const nester = DEMO_NESTERS[Math.floor(Math.random() * DEMO_NESTERS.length)]!;
+      const nesterName = input.nesterName ?? nester.preferredName;
       const member = await onboarding.createMember(context.db, {
         caretakerUserId: newUser.id,
-        fullName: nester.fullName,
-        preferredName: nester.preferredName,
+        fullName: input.nesterName ? nesterName : nester.fullName,
+        preferredName: nesterName,
         // The same real number just collected for the steward's account —
         // not a random undialable one — so outbound demo calls (which dial
         // member.phoneE164) actually reach the person testing the demo.
@@ -251,6 +262,7 @@ export const devRouter = {
         pin: randomPin(),
         timezone: "America/New_York",
         consented: true,
+        age: input.nesterAge ?? null,
       });
 
       let bankConnected = false;

@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -10,6 +10,8 @@ export const user = pgTable("user", {
   // Collected on the "simulate new user" demo shortcut so we can eventually
   // call the person testing the demo, not managed by Better Auth itself.
   phone: text("phone"),
+  // Optional; collected on sign-up but never required.
+  age: integer("age"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

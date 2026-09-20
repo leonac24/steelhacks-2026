@@ -5,7 +5,7 @@ import { Input } from "@steelhacks-2026/ui/components/input";
 import { Label } from "@steelhacks-2026/ui/components/label";
 import { cn } from "@steelhacks-2026/ui/lib/utils";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Armchair, Info, Users } from "lucide-react";
+import { Armchair, Beaker, Info, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +25,27 @@ const STEWARD_DEMO_EMAIL = "maria@example.com";
 const STEWARD_CREDENTIALS = { email: "maria@demo.dev", password: "demo-password-123" };
 
 type Mode = "steward" | "nester";
+
+// Mirrors the fake-name lists in packages/api/src/routers/dev.ts — kept as a
+// separate small copy here (rather than importing that server-only router)
+// since the beaker button just needs plausible names/ages for the form, not
+// the actual random pick the server makes when a field is left blank.
+const FAKE_STEWARD_NAMES = [
+  "Priya Sharma",
+  "Marcus Webb",
+  "Sofia Marín",
+  "Daniel Osei",
+  "Grace Lindqvist",
+] as const;
+const FAKE_NESTER_NAMES = ["Eleanor Chen", "Walter Nguyen", "Rosa Delgado", "Harold Jackson"] as const;
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)]!;
+}
 
 function RouteComponent() {
   const [mode, setMode] = useState<Mode>("steward");
@@ -105,6 +126,17 @@ function StewardSignIn() {
   const [simulateNewUser, setSimulateNewUser] = useState(false);
   const [connectDemoBank, setConnectDemoBank] = useState(true);
   const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [nesterName, setNesterName] = useState("");
+  const [nesterAge, setNesterAge] = useState("");
+
+  function fillRandomDemoNames() {
+    setName(pickRandom(FAKE_STEWARD_NAMES));
+    setAge(String(randomInt(35, 68)));
+    setNesterName(pickRandom(FAKE_NESTER_NAMES));
+    setNesterAge(String(randomInt(70, 92)));
+  }
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -112,7 +144,14 @@ function StewardSignIn() {
 
     if (simulateNewUser) {
       try {
-        const result = await client.dev.simulateNewUser({ connectDemoBank, phone });
+        const result = await client.dev.simulateNewUser({
+          connectDemoBank,
+          phone,
+          name: name.trim() || undefined,
+          age: age.trim() ? Number(age) : undefined,
+          nesterName: nesterName.trim() || undefined,
+          nesterAge: nesterAge.trim() ? Number(nesterAge) : undefined,
+        });
         await authClient.signIn.email(
           { email: result.email, password: result.password },
           {
@@ -190,6 +229,65 @@ function StewardSignIn() {
         </label>
         {simulateNewUser && (
           <div className="space-y-3 pl-6">
+            <div className="space-y-1">
+              <Label htmlFor="simulate-name" className="text-xs">
+                Your name
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="simulate-name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Fill with random demo names"
+                  onClick={fillRandomDemoNames}
+                >
+                  <Beaker className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="simulate-age" className="text-xs">
+                Your age (optional)
+              </Label>
+              <Input
+                id="simulate-age"
+                type="number"
+                min={1}
+                max={120}
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="simulate-nester-name" className="text-xs">
+                Your nester's name
+              </Label>
+              <Input
+                id="simulate-nester-name"
+                required
+                value={nesterName}
+                onChange={(e) => setNesterName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="simulate-nester-age" className="text-xs">
+                Your nester's age (optional)
+              </Label>
+              <Input
+                id="simulate-nester-age"
+                type="number"
+                min={1}
+                max={120}
+                value={nesterAge}
+                onChange={(e) => setNesterAge(e.target.value)}
+              />
+            </div>
             <div className="space-y-1">
               <Label htmlFor="simulate-phone" className="text-xs">
                 Your phone number
