@@ -23,7 +23,7 @@ function HomeComponent() {
   const healthCheck = useQuery(orpc.healthCheck.queryOptions());
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#3d2a3a]">
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#6f879e]">
       <HeroBackground />
 
       <header className="relative z-20 flex items-center justify-between px-6 py-5 sm:px-10">
@@ -48,11 +48,11 @@ function HomeComponent() {
               : "Reconnecting…"}
         </span>
 
-        <h1 className="font-display max-w-4xl text-5xl leading-[1.1] font-medium text-balance text-white sm:text-6xl lg:text-7xl">
+        <h1 className="font-display max-w-4xl text-5xl leading-[1.1] font-medium text-balance text-white [text-shadow:0_2px_18px_rgba(30,42,52,0.45)] sm:text-6xl lg:text-7xl">
           The Nest is Empty. The Egg isn&apos;t.
         </h1>
 
-        <p className="mt-6 max-w-lg text-base text-white/70 sm:text-lg">
+        <p className="mt-6 max-w-lg text-base text-white/85 [text-shadow:0_1px_10px_rgba(30,42,52,0.4)] sm:text-lg">
           You moved out, but their money didn&apos;t move on. NestEgg helps you build a budget for
           your family, and checks in by voice, so nobody has to open an app or start a hard
           conversation.
