@@ -8,6 +8,8 @@ import z from "zod";
 import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
 import * as changeRequests from "../services/change-requests";
+import { runAlertsForMember } from "../services/alerts";
+import { createElevenLabsPlaceCall } from "../services/outbound-calls";
 
 export const devRouter = {
   // Simulates a new bank transaction, e.g. a $400 gift-card charge.
@@ -60,16 +62,30 @@ export const devRouter = {
 
       const provider = createBankProvider(context.db, context.bankProvider);
       const sync = await provider.syncTransactions(input.memberId);
-      // TODO(milestone 9): await alerts.evaluate(context.db, input.memberId) and place calls.
-      return { transactionId: row?.id, synced: sync.added.length };
+      const alerts = context.elevenLabsEnv
+        ? await runAlertsForMember(
+            context.db,
+            createElevenLabsPlaceCall(context.elevenLabsEnv),
+            input.memberId,
+          )
+        : null;
+      return { transactionId: row?.id, synced: sync.added.length, alerts };
     }),
 
   runAlerts: devProcedure
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
-    .handler(async (): Promise<{ placed: number }> => {
-      // TODO(milestone 9): alerts.evaluate + outboundCalls.place.
-      throw new ORPCError("NOT_IMPLEMENTED", { message: "Alerts engine isn't built yet" });
+    .handler(async ({ input, context }) => {
+      if (!context.elevenLabsEnv) {
+        throw new ORPCError("PRECONDITION_FAILED", {
+          message: "ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID, and ELEVENLABS_PHONE_NUMBER_ID must be set",
+        });
+      }
+      return runAlertsForMember(
+        context.db,
+        createElevenLabsPlaceCall(context.elevenLabsEnv),
+        input.memberId,
+      );
     }),
 
   // Settles every overdue approval now instead of waiting for cron.
