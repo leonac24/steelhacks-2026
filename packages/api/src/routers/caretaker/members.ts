@@ -1,11 +1,42 @@
+import { ORPCError } from "@orpc/server";
 import { activityLog, caretakerLink, member } from "@steelhacks-2026/db/schema/index";
 import { and, desc, eq } from "drizzle-orm";
 import z from "zod";
 
-import { protectedProcedure, requireCaretaker } from "../../index";
+import { protectedProcedure, requireCaretaker, requirePrimaryCaretaker } from "../../index";
 import { memberSummary } from "../../services/member-summary";
+import * as onboarding from "../../services/onboarding";
+import {
+  defaultPreferredName,
+  isValidTimezone,
+  LoginAlreadyLinkedError,
+  NoAccountForEmailError,
+  normalizePhone,
+  PhoneInUseError,
+} from "../../services/onboarding-rules";
 
 const memberInput = z.object({ memberId: z.string() });
+
+// Callers type phone numbers freely; store one canonical form.
+const phone = z.string().transform((value, ctx) => {
+  try {
+    return normalizePhone(value);
+  } catch (error) {
+    ctx.addIssue({ code: "custom", message: (error as Error).message });
+    return z.NEVER;
+  }
+});
+
+const timezone = z.string().refine(isValidTimezone, "Use an IANA timezone, e.g. America/New_York");
+
+// Spoken digit by digit on the phone, so keep it four digits.
+const pin = z.string().regex(/^\d{4}$/, "The PIN must be 4 digits");
+
+const profile = {
+  fullName: z.string().trim().min(1).max(120),
+  preferredName: z.string().trim().min(1).max(60),
+  timezone,
+};
 
 export const membersRouter = {
   // Everyone this caretaker looks after.
@@ -28,6 +59,81 @@ export const membersRouter = {
     .input(memberInput)
     .use(requireCaretaker)
     .handler(({ input, context }) => memberSummary(context.db, input.memberId)),
+
+  // Onboarding: creates the member, makes the caller their primary caretaker,
+  // and applies the default budgets, alert rules, and permission tiers.
+  create: protectedProcedure
+    .input(
+      z.object({
+        ...profile,
+        // Falls back to their first name.
+        preferredName: profile.preferredName.optional(),
+        phoneE164: phone,
+        pin,
+        // The member has to agree before a caretaker watches their money.
+        consented: z.boolean(),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      if (!input.consented) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "The member has to agree before you can set this up",
+        });
+      }
+      try {
+        return await onboarding.createMember(context.db, {
+          ...input,
+          preferredName: input.preferredName ?? defaultPreferredName(input.fullName),
+          caretakerUserId: context.session.user.id,
+        });
+      } catch (error) {
+        if (error instanceof PhoneInUseError) {
+          throw new ORPCError("CONFLICT", { message: error.message });
+        }
+        throw error;
+      }
+    }),
+
+  update: protectedProcedure
+    .input(
+      memberInput.extend({
+        fullName: profile.fullName.optional(),
+        preferredName: profile.preferredName.optional(),
+        timezone: timezone.optional(),
+        consented: z.boolean().optional(),
+      }),
+    )
+    .use(requirePrimaryCaretaker)
+    .handler(({ input, context }) =>
+      onboarding.updateMember(context.db, {
+        ...input,
+        caretakerUserId: context.session.user.id,
+      }),
+    ),
+
+  setPin: protectedProcedure
+    .input(memberInput.extend({ pin }))
+    .use(requirePrimaryCaretaker)
+    .handler(({ input, context }) => onboarding.setPin(context.db, input.memberId, input.pin)),
+
+  // Connects the member's own app login, once they've signed up in the app.
+  linkAppLogin: protectedProcedure
+    .input(memberInput.extend({ email: z.string().email() }))
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      try {
+        return await onboarding.linkAppLogin(context.db, input.memberId, input.email);
+      } catch (error) {
+        if (error instanceof LoginAlreadyLinkedError) {
+          throw new ORPCError("CONFLICT", { message: error.message });
+        }
+        if (error instanceof NoAccountForEmailError) {
+          throw new ORPCError("NOT_FOUND", { message: error.message });
+        }
+        // Anything else is a real failure; don't disguise it as a 404.
+        throw error;
+      }
+    }),
 };
 
 export const activityRouter = {
