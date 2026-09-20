@@ -24,10 +24,38 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
+        name: "theme-color",
+        content: "#b45309",
+      },
+      {
+        name: "mobile-web-app-capable",
+        content: "yes",
+      },
+      {
+        name: "apple-mobile-web-app-capable",
+        content: "yes",
+      },
+      {
+        name: "apple-mobile-web-app-status-bar-style",
+        content: "default",
+      },
+      {
+        name: "apple-mobile-web-app-title",
+        content: "NestEgg",
+      },
+      {
         title: "NestEgg",
       },
     ],
     links: [
+      {
+        rel: "manifest",
+        href: "/manifest.webmanifest",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/apple-touch-icon.png",
+      },
       {
         rel: "preconnect",
         href: "https://fonts.googleapis.com",
@@ -50,7 +78,6 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         type: "image/svg+xml",
         href: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪺</text></svg>`,
       },
-
     ],
   }),
 
