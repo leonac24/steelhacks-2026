@@ -92,7 +92,8 @@ async function main() {
     conversation_config?: { agent?: { prompt?: Record<string, unknown>; language?: string } };
   };
   const agentInner = agent.conversation_config?.agent ?? {};
-  const promptPatch = { ...agentInner.prompt, prompt, tool_ids: toolIds };
+  const { tool_ids: _oldToolIds, tools: _oldTools, ...promptRest } = agentInner.prompt ?? {};
+  const promptPatch = { ...promptRest, prompt, tool_ids: toolIds };
 
   await elevenLabs(`/v1/convai/agents/${agentId}`, {
     method: "PATCH",

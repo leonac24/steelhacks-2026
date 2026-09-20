@@ -2,7 +2,6 @@ import { startInboundSession } from "@steelhacks-2026/api/services/call-sessions
 import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";
 
-import { requireToolSecret } from "../../../lib/voice";
 import { db } from "../../../services";
 
 const initBody = z.object({
@@ -20,9 +19,10 @@ export const Route = createFileRoute("/api/elevenlabs/init")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = requireToolSecret(request);
-        if (auth) return auth;
-
+        // No secret required here: this endpoint only registers a call session; it
+        // never returns member data. Sensitive data stays behind verify_pin + the
+        // authenticated tool webhooks. ElevenLabs's conversation-initiation webhook
+        // doesn't forward custom headers, so a header check can't be satisfied.
         let body: unknown;
         try {
           body = await request.json();
