@@ -55,3 +55,42 @@ export class MockProvider implements BankDataProvider {
     return this.db.select().from(recurringStream).where(eq(recurringStream.memberId, memberId));
   }
 }
+
+// Dev/demo only: inserts a fake bank transaction (e.g. a $400 unusual charge)
+// and syncs so it comes back in `added`, the same shape the Plaid path
+// produces. Lets the demo run end to end with BANK_PROVIDER=mock.
+export async function injectMockTransaction(
+  db: Database,
+  input: { memberId: string; amountCents: number; merchantName: string; daysAgo?: number },
+): Promise<SyncResult> {
+  const account = await db.query.bankAccount.findFirst({
+    where: eq(bankAccount.memberId, input.memberId),
+  });
+  if (!account) {
+    throw new Error("No bank account for this member; seed one first (pnpm run db:seed)");
+  }
+
+  const date = new Date();
+  date.setDate(date.getDate() - (input.daysAgo ?? 0));
+  const dateString = date.toISOString().slice(0, 10);
+
+  await db.insert(transaction).values({
+    memberId: input.memberId,
+    bankAccountId: account.id,
+    providerTxnId: `dev-${crypto.randomUUID()}`,
+    date: dateString,
+    amountCents: input.amountCents,
+    merchantName: input.merchantName,
+  });
+
+  // Keep balances honest so the dashboard and safe-to-spend move during the demo.
+  await db
+    .update(bankAccount)
+    .set({
+      currentBalanceCents: account.currentBalanceCents - input.amountCents,
+      availableBalanceCents: account.availableBalanceCents - input.amountCents,
+    })
+    .where(eq(bankAccount.id, account.id));
+
+  return new MockProvider(db).syncTransactions(input.memberId);
+}
