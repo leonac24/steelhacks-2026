@@ -1,16 +1,41 @@
 // Buttons for the live demo. Only mounted when dev tools are enabled.
 import { ORPCError } from "@orpc/server";
-import { bankAccount, transaction } from "@steelhacks-2026/db/schema/index";
-import { todayInTimezone } from "@steelhacks-2026/finance";
-import { eq, sql } from "drizzle-orm";
-import z from "zod";
+import { z } from "zod";
 
 import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
+import { injectMockTransaction } from "../providers/mock";
 import * as changeRequests from "../services/change-requests";
 
 export const devRouter = {
-  // Simulates a new bank transaction, e.g. a $400 gift-card charge.
+  // Mints a Plaid Sandbox item for a member so the demo has real data to
+  // sync, without a Link UI. No-op error if BANK_PROVIDER isn't "plaid".
+  plaidCreateSandboxItem: devProcedure
+    .input(z.object({ memberId: z.string(), institutionId: z.string().optional() }))
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      if (!context.createSandboxPlaidItem) {
+        throw new ORPCError("BAD_REQUEST", { message: "Set BANK_PROVIDER=plaid to use this" });
+      }
+      const result = await context.createSandboxPlaidItem(input);
+      // Pull balances right away so the caretaker dashboard has something to show.
+      await createBankProvider(context.db, context.bankProvider).getAccounts(input.memberId);
+      return result;
+    }),
+
+  // Syncs a member's transactions on demand, independent of whether a real
+  // Plaid webhook has fired (sandbox webhooks can lag or need a tunnel).
+  plaidSyncNow: devProcedure
+    .input(z.object({ memberId: z.string() }))
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      return createBankProvider(context.db, context.bankProvider).syncTransactions(input.memberId);
+    }),
+
+  // Simulates a new bank transaction, e.g. a $400 gift-card charge. Plaid mode
+  // goes through the Sandbox API; mock mode inserts a row directly. Returns the
+  // SyncResult so a future alerts step (alerts.evaluate, another team's work)
+  // can consume `added` and trigger a call after the transaction lands.
   injectTransaction: devProcedure
     .input(
       z.object({
@@ -22,46 +47,16 @@ export const devRouter = {
           .refine((n) => n !== 0, "Amount can't be zero"),
         merchantName: z.string().min(1).max(80),
         category: z.string().min(1).max(40).default("other"),
+        // Plaid Sandbox only accepts the present date or up to 14 days back.
+        daysAgo: z.number().int().min(0).max(14).optional(),
       }),
     )
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      if (context.bankProvider === "plaid") {
-        // TODO(milestone 9): call Plaid Sandbox /sandbox/transactions/create, then sync.
-        // https://plaid.com/docs/api/sandbox/#sandboxtransactionscreate
-        throw new ORPCError("NOT_IMPLEMENTED", { message: "Plaid injection isn't set up yet" });
+      if (context.injectPlaidTransaction) {
+        return context.injectPlaidTransaction(input);
       }
-      const account = await context.db.query.bankAccount.findFirst({
-        where: eq(bankAccount.memberId, input.memberId),
-        with: { member: true },
-      });
-      if (!account) throw new ORPCError("NOT_FOUND", { message: "Member has no bank account" });
-
-      const [row] = await context.db
-        .insert(transaction)
-        .values({
-          memberId: input.memberId,
-          bankAccountId: account.id,
-          providerTxnId: `dev-${crypto.randomUUID()}`,
-          date: todayInTimezone(account.member.timezone),
-          amountCents: input.amountCents,
-          merchantName: input.merchantName,
-          category: input.category,
-        })
-        .returning();
-      // A real bank moves the balance too.
-      await context.db
-        .update(bankAccount)
-        .set({
-          currentBalanceCents: sql`${bankAccount.currentBalanceCents} - ${input.amountCents}`,
-          availableBalanceCents: sql`${bankAccount.availableBalanceCents} - ${input.amountCents}`,
-        })
-        .where(eq(bankAccount.id, account.id));
-
-      const provider = createBankProvider(context.db, context.bankProvider);
-      const sync = await provider.syncTransactions(input.memberId);
-      // TODO(milestone 9): await alerts.evaluate(context.db, input.memberId) and place calls.
-      return { transactionId: row?.id, synced: sync.added.length };
+      return injectMockTransaction(context.db, input);
     }),
 
   runAlerts: devProcedure
