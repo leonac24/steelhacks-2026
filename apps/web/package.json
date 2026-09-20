@@ -28,7 +28,7 @@
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-router-ssr-query": "^1.167.2",
     "@tanstack/react-start": "^1.168.49",
-    "@varlock/vite-integration": "1.5.1",
+    "@varlock/vite-integration": "1.5.2",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "lucide-react": "catalog:",
