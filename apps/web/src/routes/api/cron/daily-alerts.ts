@@ -1,10 +1,9 @@
 import * as alerts from "@steelhacks-2026/api/services/alerts";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { ENV } from "../../../env.server";
 import { rejectUnauthorizedCron } from "../../../lib/cron-auth";
 import { elevenLabsConfig } from "../../../lib/elevenlabs";
-import { db } from "../../../services";
+import { bankProvider, db } from "../../../services";
 
 // Evaluates every member and places the calls they're due.
 async function handle({ request }: { request: Request }) {
@@ -14,7 +13,7 @@ async function handle({ request }: { request: Request }) {
   const started = Date.now();
   const results = await alerts.dispatchAll(db, {
     elevenLabs: elevenLabsConfig(),
-    bankProvider: ENV.BANK_PROVIDER,
+    bankProvider,
   });
   const placed = results.reduce((sum, r) => sum + r.placed, 0);
   console.log(`[cron] daily-alerts: ${placed} call(s) across ${results.length} member(s)`);

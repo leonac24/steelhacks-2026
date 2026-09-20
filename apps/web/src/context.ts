@@ -2,7 +2,7 @@ import type { Context as ApiContext } from "@steelhacks-2026/api/context";
 
 import { ENV } from "./env.server";
 import { elevenLabsConfig } from "./lib/elevenlabs";
-import { auth, db } from "./services";
+import { auth, createSandboxItem, db, injectPlaidTransaction } from "./services";
 
 export async function createContext({ req }: { req: Request }): Promise<ApiContext> {
   const session = await auth.api.getSession({
@@ -14,6 +14,8 @@ export async function createContext({ req }: { req: Request }): Promise<ApiConte
     bankProvider: ENV.BANK_PROVIDER,
     devToolsEnabled: ENV.NODE_ENV !== "production" || ENV.DEV_TOOLS_ENABLED === true,
     elevenLabs: elevenLabsConfig(),
+    createSandboxPlaidItem: createSandboxItem,
+    injectPlaidTransaction,
   };
 }
 

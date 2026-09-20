@@ -10,7 +10,7 @@ import {
 import { localTimeInTimezone, todayInTimezone } from "@steelhacks-2026/finance";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 
-import { createBankProvider, type BankProviderKind } from "../providers";
+import type { BankDataProvider } from "../providers";
 import * as activity from "./activity";
 import {
   buildCandidates,
@@ -201,7 +201,8 @@ export async function dispatchAll(
   db: Database,
   options: {
     elevenLabs?: ElevenLabsConfig | null;
-    bankProvider?: BankProviderKind;
+    // Pass the app's configured provider to pick up new transactions first.
+    bankProvider?: BankDataProvider;
     now?: Date;
   } = {},
 ) {
@@ -209,11 +210,9 @@ export async function dispatchAll(
   const results = [];
   for (const row of members) {
     try {
-      let newTransactions: NewTransaction[] = [];
-      if (options.bankProvider) {
-        const provider = createBankProvider(db, options.bankProvider);
-        newTransactions = (await provider.syncTransactions(row.id)).added;
-      }
+      const newTransactions: NewTransaction[] = options.bankProvider
+        ? (await options.bankProvider.syncTransactions(row.id)).added
+        : [];
       const result = await dispatch(db, row.id, { ...options, newTransactions });
       results.push({ memberId: row.id, ...result });
     } catch (error) {

@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { id, timestamps } from "./columns";
 import { bankProvider, recurringFrequency, recurringKind, transactionSource } from "./enums";
@@ -85,7 +85,13 @@ export const recurringStream = pgTable(
     averageAmountCents: integer("average_amount_cents").notNull(),
     frequency: recurringFrequency("frequency").notNull(),
     nextExpectedDate: date("next_expected_date", { mode: "string" }),
+    // Plaid's recurring stream id, so a re-sync updates the same row instead
+    // of duplicating it. Null for manually seeded / voice-entered streams.
+    providerStreamId: text("provider_stream_id"),
     ...timestamps(),
   },
-  (t) => [index("recurring_stream_member_idx").on(t.memberId)],
+  (t) => [
+    index("recurring_stream_member_idx").on(t.memberId),
+    uniqueIndex("recurring_stream_provider_idx").on(t.providerStreamId),
+  ],
 );
