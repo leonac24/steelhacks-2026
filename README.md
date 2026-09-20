@@ -1,21 +1,21 @@
-# Robin — Phone Banking for Elders
+# NestEgg — Phone Banking for Elders
 
-Robin helps older adults understand and manage their money **by phone call** — no app, no login, no PIN-typing on a tiny screen. A member calls Robin (or Robin calls them) and talks through balances, bills, and spending in plain language. A family caretaker links the bank account, sets budgets and safety rules, and supervises everything from a web dashboard.
+NestEgg helps older adults understand and manage their money **by phone call** — no app, no login, no PIN-typing on a tiny screen. A user calls the phone assistant Robin (or Robin calls them) and talks through balances, bills, and spending in plain language. A family caretaker links the bank account, sets budgets and safety rules, and supervises everything from a web dashboard.
 
-See [`CONTEXT.md`](./CONTEXT.md) for the full glossary of terms (Member, Caretaker, Change Request, Alert, Safe to Spend, etc.) used throughout the code and docs.
+See [`CONTEXT.md`](./CONTEXT.md) for the full glossary of terms (user, Caretaker, Change Request, Alert, Safe to Spend, etc.) used throughout the code and docs.
 
 ## What it does
 
-- **Member calls Robin, or Robin calls the member.** One [ElevenLabs](https://elevenlabs.io) voice agent (over Twilio) handles both directions, gated by a spoken PIN before any account details are shared — even on calls Robin places.
+- **User calls Robin, or Robin calls the user.** One [ElevenLabs](https://elevenlabs.io) voice agent (over Twilio) handles both directions, gated by a spoken PIN before any account details are shared — even on calls Robin places.
 - **Ask by voice:** current balance, upcoming bills, recent transactions, "can I afford this?" (Safe to Spend), and budget status.
-- **Propose changes by voice:** a member can ask to raise a budget or flag a transaction; depending on the caretaker's permission tier the change applies instantly, applies with a notification, or waits for caretaker approval.
-- **Proactive alerts:** Robin calls the member about a projected shortfall, an unfunded bill due soon, an unusual transaction, or a deposit that arrived — each deduplicated so the same real-world event never triggers two calls.
+- **Propose changes by voice:** a user can ask to raise a budget or flag a transaction; depending on the caretaker's permission tier the change applies instantly, applies with a notification, or waits for caretaker approval.
+- **Proactive alerts:** NestEgg calls the user about a projected shortfall, an unfunded bill due soon, an unusual transaction, or a deposit that arrived — each deduplicated so the same real-world event never triggers two calls.
 - **Caretaker dashboard (web):** link a bank account (mock provider or [Plaid](https://plaid.com)), set budgets and alert rules, review pending approvals, read call summaries/transcripts, and get notified by email.
-- **Native app:** a lighter member-facing view built with Expo/React Native.
+- **Native app:** a lighter user-facing view built with Expo/React Native.
 
 ### Why phone calls, not an app
 
-Voice is the interface an older adult already knows how to use. Robin trades screens and passwords for a conversation, while every financial action still goes through the same server-side authorization and audit trail a dashboard would have — see the [ADRs](./docs/adr) for how identity and permissions are enforced independent of what the voice model says or hallucinates.
+Voice is the interface an older adult already knows how to use. NestEgg trades screens and passwords for a conversation, while every financial action still goes through the same server-side authorization and audit trail a dashboard would have — see the [ADRs](./docs/adr) for how identity and permissions are enforced independent of what the voice model says or hallucinates.
 
 ## Stack
 
@@ -27,7 +27,7 @@ TypeScript monorepo on [Better-T-Stack](https://github.com/AmanVarshney01/create
 steelhacks-2026/
 ├── apps/
 │   ├── web/         # Caretaker dashboard (React + TanStack Start) + server/API routes
-│   └── native/      # Member-facing mobile app (React Native, Expo)
+│   └── native/      # user-facing mobile app (React Native, Expo)
 ├── packages/
 │   ├── ui/          # Shared shadcn/ui components and styles
 │   ├── api/         # oRPC routers + business logic (alerts, budgets, change requests, voice tools)
@@ -70,7 +70,7 @@ pnpm run dev
 
 Open [http://localhost:3001](http://localhost:3001) for the caretaker dashboard. Use the Expo Go app to run the mobile application.
 
-By default `BANK_PROVIDER=mock` serves seeded demo data, so you can explore the dashboard without a Plaid account. Run `pnpm run db:seed` (via the `web` app) to seed a demo member/caretaker.
+By default `BANK_PROVIDER=mock` serves seeded demo data, so you can explore the dashboard without a Plaid account. Run `pnpm run db:seed` (via the `web` app) to seed a demo user/caretaker.
 
 ### Voice agent (Robin) setup
 
@@ -79,7 +79,7 @@ Voice features (`ELEVENLABS_*`) are optional for running the dashboard, but requ
 1. Create an ElevenLabs Conversational AI agent and phone number.
 2. Set `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_PHONE_NUMBER_ID`, `ELEVENLABS_TOOL_SECRET`, `ELEVENLABS_WEBHOOK_SECRET` in `apps/web/.env`.
 3. Push the prompt and tool schema (`docs/robin-prompt.md`, `docs/agent-tools.json`) to the agent with the `sync-agent` script.
-4. Set `DEMO_MEMBER_PHONE` to the E.164 number you'll call from for a demo.
+4. Set `DEMO_user_PHONE` to the E.164 number you'll call from for a demo.
 
 Read [`docs/plans/voice-line.md`](./docs/plans/voice-line.md) for the full wiring (webhooks, PIN gate, alert dedupe) and [`docs/adr`](./docs/adr) for why it's built that way.
 
