@@ -23,7 +23,7 @@ function HomeComponent() {
   const healthCheck = useQuery(orpc.healthCheck.queryOptions());
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#6f879e]">
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#3f7a95]">
       <HeroBackground />
 
       <header className="relative z-20 flex items-center justify-between px-6 py-5 sm:px-10">

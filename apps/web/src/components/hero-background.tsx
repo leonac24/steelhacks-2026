@@ -450,22 +450,23 @@ export function HeroBackground() {
       aria-hidden
     >
       <defs>
-        {/* dusty blue overhead, warming to a pale peach band at the horizon */}
+        {/* dusty blue overhead, cooling into a pale pastel green band at the
+            horizon — the app's blue/green palette. */}
         {/* The headline sits over the 30–60% band, so those stops stay a touch
             deeper and more saturated than a literal dawn would be — enough to
             hold white type without losing the pastel feel. */}
         <linearGradient id="hero-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6f879e" />
-          <stop offset="34%" stopColor="#8497ac" />
-          <stop offset="55%" stopColor="#a29dad" />
-          <stop offset="68%" stopColor="#d6ae9d" />
-          <stop offset="78%" stopColor="#e5c1ab" />
-          <stop offset="100%" stopColor="#c6cacf" />
+          <stop offset="0%" stopColor="#3f7a95" />
+          <stop offset="34%" stopColor="#5c93a3" />
+          <stop offset="55%" stopColor="#7ea69f" />
+          <stop offset="68%" stopColor="#8ec3a8" />
+          <stop offset="78%" stopColor="#a8d6ba" />
+          <stop offset="100%" stopColor="#c3e6c9" />
         </linearGradient>
         <radialGradient id="hero-glow" cx="50%" cy="70%" r="42%">
-          <stop offset="0%" stopColor="#ffe6cf" stopOpacity="0.36" />
-          <stop offset="55%" stopColor="#ffd9bd" stopOpacity="0.11" />
-          <stop offset="100%" stopColor="#ffd9bd" stopOpacity="0" />
+          <stop offset="0%" stopColor="#cdf0d9" stopOpacity="0.36" />
+          <stop offset="55%" stopColor="#bfe8d4" stopOpacity="0.11" />
+          <stop offset="100%" stopColor="#bfe8d4" stopOpacity="0" />
         </radialGradient>
 
         {/* Ridge fills. Each is lighter and hazier than the one in front of it,
@@ -506,8 +507,8 @@ export function HeroBackground() {
         {/* Haze wash laid over each distant ridge so the ridge below reads as
             closer without having to hand-pick a dozen more fill colors. */}
         <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#e2cec2" stopOpacity="0.44" />
-          <stop offset="100%" stopColor="#e6d4c8" stopOpacity="0" />
+          <stop offset="0%" stopColor="#c9e6d2" stopOpacity="0.44" />
+          <stop offset="100%" stopColor="#cfe9d8" stopOpacity="0" />
         </linearGradient>
 
         {/* Canopy grain. Turbulence over the near hills breaks up the flat fill

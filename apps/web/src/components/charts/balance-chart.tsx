@@ -23,8 +23,8 @@ export function BalanceChart({ data }: { data: { date: string; balanceCents: num
             <stop offset="95%" stopColor="var(--color-balanceCents)" stopOpacity={0.02} />
           </linearGradient>
           <linearGradient id="balanceStroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#fbbf24" />
-            <stop offset="100%" stopColor="#b45309" />
+            <stop offset="0%" stopColor="#6fc9b8" />
+            <stop offset="100%" stopColor="#1c6f6a" />
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
