@@ -5,6 +5,7 @@ import { z } from "zod";
 import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
+import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
 
@@ -59,9 +60,8 @@ export const devRouter = {
     }),
 
   // Simulates a new bank transaction, e.g. a $400 gift-card charge. Plaid mode
-  // goes through the Sandbox API; mock mode inserts a row directly. Returns the
-  // SyncResult so a future alerts step (alerts.evaluate, another team's work)
-  // can consume `added` and trigger a call after the transaction lands.
+  // goes through the Sandbox API; mock mode inserts a row directly. Then runs
+  // the alerts engine over what landed, which is the "June calls you" moment.
   injectTransaction: devProcedure
     .input(
       z.object({
@@ -79,24 +79,39 @@ export const devRouter = {
     )
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      const result = context.injectPlaidTransaction
+      const sync = context.injectPlaidTransaction
         ? await context.injectPlaidTransaction(input)
         : await injectMockTransaction(context.db, input);
-      await checkAfterNewTransactions(
-        context.db,
-        input.memberId,
-        result.added.length,
-        "dev.injectTransaction",
-      );
-      return result;
+
+      // Two independent notification channels off the same new transactions:
+      // the rule-based alerts engine (may place a voice call), and Gemini
+      // fraud + budget-pace checks (land on the caretaker's dashboard/email).
+      const [dispatched] = await Promise.all([
+        alerts.dispatch(context.db, input.memberId, {
+          newTransactions: sync.added,
+          elevenLabs: context.elevenLabs,
+        }),
+        checkAfterNewTransactions(
+          context.db,
+          input.memberId,
+          sync.added.length,
+          "dev.injectTransaction",
+        ),
+      ]);
+      return { ...sync, ...dispatched };
     }),
 
+  // Syncs the bank, then calls about anything worth calling about.
   runAlerts: devProcedure
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
-    .handler(async (): Promise<{ placed: number }> => {
-      // TODO(milestone 9): alerts.evaluate + outboundCalls.place.
-      throw new ORPCError("NOT_IMPLEMENTED", { message: "Alerts engine isn't built yet" });
+    .handler(async ({ input, context }) => {
+      const provider = createBankProvider(context.db, context.bankProvider);
+      const sync = await provider.syncTransactions(input.memberId);
+      return alerts.dispatch(context.db, input.memberId, {
+        newTransactions: sync.added,
+        elevenLabs: context.elevenLabs,
+      });
     }),
 
   // Settles every overdue approval now instead of waiting for cron.

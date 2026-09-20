@@ -18,6 +18,7 @@ import z from "zod";
 
 import { protectedProcedure, requireCaretaker, requirePrimaryCaretaker } from "../../index";
 import * as activity from "../../services/activity";
+import { budgetsOverview } from "../../services/budgets";
 import { cents, clockTime, payloadSchemas } from "../../services/change-rules";
 
 const memberInput = z.object({ memberId: z.string() });
@@ -97,6 +98,12 @@ export const settingsRouter = {
 };
 
 export const budgetsRouter = {
+  // Budgets with this month's spending against them; what a budget screen shows.
+  progress: protectedProcedure
+    .input(memberInput)
+    .use(requireCaretaker)
+    .handler(({ input, context }) => budgetsOverview(context.db, input.memberId)),
+
   list: protectedProcedure
     .input(memberInput)
     .use(requireCaretaker)
@@ -121,6 +128,19 @@ export const budgetsRouter = {
         })
         .returning();
       await logEdit(context, input.memberId, `set the ${input.category} budget.`);
+      return row;
+    }),
+
+  remove: protectedProcedure
+    .input(memberInput.extend({ category: payloadSchemas.budget_update.shape.category }))
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      const [row] = await context.db
+        .delete(budget)
+        .where(and(eq(budget.memberId, input.memberId), eq(budget.category, input.category)))
+        .returning({ category: budget.category });
+      if (!row) throw new ORPCError("NOT_FOUND", { message: "No budget for that category" });
+      await logEdit(context, input.memberId, `removed the ${input.category} budget.`);
       return row;
     }),
 };
