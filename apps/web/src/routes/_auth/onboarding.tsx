@@ -28,8 +28,12 @@ const REAL_LOOKING_INSTITUTIONS = ["Chase", "Capital One", "Wells Fargo", "Bank 
 
 type AssistantId = "Jay" | "Robin";
 const ASSISTANTS: { id: AssistantId; emoji: string; blurb: string; sound: string }[] = [
-  { id: "Robin", emoji: "🐤", blurb: "Warm and a little slower.", sound: "/sounds/robin.wav" },
-
+  {
+    id: "Robin",
+    emoji: "🐦‍🔥",
+    blurb: "Warm and a little slower.",
+    sound: "/sounds/robin.wav",
+  },
   { id: "Jay", emoji: "🐦", blurb: "Bright and to the point.", sound: "/sounds/jay.wav" },
 ];
 
@@ -216,7 +220,7 @@ function AssistantStep({
   onNext: () => void;
   onSkip: () => void;
 }) {
-  const [selected, setSelected] = useState<AssistantId>("Jay");
+  const [selected, setSelected] = useState<AssistantId>("Robin");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const updateSettings = useMutation(
     orpc.caretaker.settings.update.mutationOptions({

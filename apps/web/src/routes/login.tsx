@@ -104,6 +104,7 @@ function StewardSignIn() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [simulateNewUser, setSimulateNewUser] = useState(false);
   const [connectDemoBank, setConnectDemoBank] = useState(true);
+  const [phone, setPhone] = useState("");
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -111,7 +112,7 @@ function StewardSignIn() {
 
     if (simulateNewUser) {
       try {
-        const result = await client.dev.simulateNewUser({ connectDemoBank });
+        const result = await client.dev.simulateNewUser({ connectDemoBank, phone });
         await authClient.signIn.email(
           { email: result.email, password: result.password },
           {
@@ -188,18 +189,36 @@ function StewardSignIn() {
           </span>
         </label>
         {simulateNewUser && (
-          <label className="flex items-start gap-2 pl-6 text-sm">
-            <Checkbox
-              checked={connectDemoBank}
-              onCheckedChange={(checked) => setConnectDemoBank(checked === true)}
-            />
-            <span>
-              Automatically connect Demo Bank
-              <span className="text-muted-foreground block text-xs">
-                Backfills real Plaid Sandbox transaction history right away.
+          <div className="space-y-3 pl-6">
+            <div className="space-y-1">
+              <Label htmlFor="simulate-phone" className="text-xs">
+                Your phone number
+              </Label>
+              <Input
+                id="simulate-phone"
+                type="tel"
+                placeholder="+1 412 555 0142"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              <p className="text-muted-foreground text-xs">
+                So we can eventually give you a call as part of the demo.
+              </p>
+            </div>
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox
+                checked={connectDemoBank}
+                onCheckedChange={(checked) => setConnectDemoBank(checked === true)}
+              />
+              <span>
+                Automatically connect Demo Bank
+                <span className="text-muted-foreground block text-xs">
+                  Backfills real Plaid Sandbox transaction history right away.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          </div>
         )}
       </div>
 

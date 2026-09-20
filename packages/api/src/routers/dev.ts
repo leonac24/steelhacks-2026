@@ -1,15 +1,17 @@
 // Buttons for the live demo. Only mounted when dev tools are enabled.
 import { ORPCError } from "@orpc/server";
+import { user } from "@steelhacks-2026/db/schema/index";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { devProcedure, publicDevProcedure, requirePrimaryCaretaker } from "../index";
-import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
 import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
 import { connectDemoBank } from "../services/demo-bank";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
 import * as onboarding from "../services/onboarding";
+import { normalizePhone } from "../services/onboarding-rules";
 
 // A handful of plausible nesters for the "simulate new user" shortcut — just
 // enough variety that repeat demos don't all look identical.
@@ -18,6 +20,16 @@ const DEMO_NESTERS = [
   { fullName: "Walter Nguyen", preferredName: "Walt" },
   { fullName: "Rosa Delgado", preferredName: "Rosa" },
   { fullName: "Harold Jackson", preferredName: "Harold" },
+] as const;
+
+// Same idea for the steward account itself — shown in the sidebar afterward,
+// so "New Steward" would look obviously fake.
+const DEMO_STEWARDS = [
+  "Priya Sharma",
+  "Marcus Webb",
+  "Sofia Marín",
+  "Daniel Osei",
+  "Grace Lindqvist",
 ] as const;
 
 function randomDemoPhone(): string {
@@ -57,7 +69,7 @@ export const devRouter = {
       }
       const result = await context.createSandboxPlaidItem(input);
       // Pull balances right away so the caretaker dashboard has something to show.
-      await createBankProvider(context.db, context.bankProvider).getAccounts(input.memberId);
+      await context.bankProviderInstance.getAccounts(input.memberId);
       return result;
     }),
 
@@ -67,9 +79,7 @@ export const devRouter = {
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      const result = await createBankProvider(context.db, context.bankProvider).syncTransactions(
-        input.memberId,
-      );
+      const result = await context.bankProviderInstance.syncTransactions(input.memberId);
       await checkAfterNewTransactions(
         context.db,
         input.memberId,
@@ -126,8 +136,7 @@ export const devRouter = {
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      const provider = createBankProvider(context.db, context.bankProvider);
-      const sync = await provider.syncTransactions(input.memberId);
+      const sync = await context.bankProviderInstance.syncTransactions(input.memberId);
       return alerts.dispatch(context.db, input.memberId, {
         newTransactions: sync.added,
         elevenLabs: context.elevenLabs,
@@ -145,17 +154,32 @@ export const devRouter = {
   // No pre-seeded history is involved — this is the same path a real new
   // user would go through.
   simulateNewUser: publicDevProcedure
-    .input(z.object({ connectDemoBank: z.boolean().default(false) }))
+    .input(
+      z.object({
+        connectDemoBank: z.boolean().default(false),
+        // Collected so we can eventually call the person testing the demo.
+        phone: z.string().min(1, "A phone number is required"),
+      }),
+    )
     .handler(async ({ input, context }) => {
       if (!context.createUser) {
         throw new ORPCError("BAD_REQUEST", {
           message: "User creation isn't wired up in this environment",
         });
       }
+      let phone: string;
+      try {
+        phone = normalizePhone(input.phone);
+      } catch (error) {
+        throw new ORPCError("BAD_REQUEST", { message: (error as Error).message });
+      }
+
       const suffix = crypto.randomUUID().slice(0, 8);
       const email = `demo-${suffix}@nestegg.dev`;
       const password = "demo-password-123";
-      const newUser = await context.createUser({ name: "New Steward", email, password });
+      const stewardName = DEMO_STEWARDS[Math.floor(Math.random() * DEMO_STEWARDS.length)]!;
+      const newUser = await context.createUser({ name: stewardName, email, password });
+      await context.db.update(user).set({ phone }).where(eq(user.id, newUser.id));
 
       const nester = DEMO_NESTERS[Math.floor(Math.random() * DEMO_NESTERS.length)]!;
       const member = await onboarding.createMember(context.db, {

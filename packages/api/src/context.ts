@@ -1,13 +1,18 @@
 import type { Session } from "@steelhacks-2026/auth";
 import type { Database } from "@steelhacks-2026/db";
 
-import type { BankProviderKind, SyncResult } from "./providers";
+import type { BankDataProvider, BankProviderKind, SyncResult } from "./providers";
 import type { ElevenLabsConfig } from "./services/outbound-calls";
 
 export type Context = {
   session: Session | null;
   db: Database;
   bankProvider: BankProviderKind;
+  // The actual configured provider (already carries Plaid creds when
+  // relevant) — use this instead of calling createBankProvider(db,
+  // bankProvider) again, which would construct a Plaid provider with no
+  // credentials and throw.
+  bankProviderInstance: BankDataProvider;
   // Gates the dev.* procedures that power the live demo.
   devToolsEnabled: boolean;
   // Null when no ElevenLabs credentials are configured; calls are then logged
