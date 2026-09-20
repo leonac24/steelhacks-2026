@@ -81,6 +81,9 @@ export const activityLog = pgTable(
     summaryText: text("summary_text").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
     visibleToCaretaker: boolean("visible_to_caretaker").notNull().default(true),
+    // Null until the caretaker opens /notifications, which marks every
+    // then-unread row read. Drives the unread badge in the sidebar.
+    readAt: timestamp("read_at"),
     ...timestamps(),
   },
   (t) => [index("activity_log_member_created_idx").on(t.memberId, t.createdAt)],

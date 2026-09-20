@@ -14,6 +14,8 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@steelhacks-2026/ui/components/sidebar";
+import { Badge } from "@steelhacks-2026/ui/components/badge";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect, useMatches } from "@tanstack/react-router";
 import {
   Armchair,
@@ -36,8 +38,10 @@ import { Logo } from "@/components/logo";
 import { MemberSwitcher } from "@/components/member-switcher";
 import UserMenu from "@/components/user-menu";
 import { getUser } from "@/functions/get-user";
+import { useActiveMember } from "@/hooks/use-active-member";
 import { useTheme } from "@/hooks/use-theme";
 import { authClient } from "@/lib/auth-client";
+import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth")({
   component: AuthLayout,
@@ -91,6 +95,16 @@ const NAV_GROUPS = [
 function AuthLayout() {
   const matches = useMatches();
   const activePath = matches[matches.length - 1]?.pathname ?? "";
+  const { activeMemberId } = useActiveMember();
+  const unreadCount = useQuery(
+    orpc.caretaker.notifications.unreadCount.queryOptions({
+      input: { memberId: activeMemberId! },
+      enabled: !!activeMemberId,
+      // Polls so the badge picks up alerts logged while a caretaker is
+      // browsing elsewhere in the app, not just on next full page load.
+      refetchInterval: 30_000,
+    }),
+  );
 
   // Nester mode (/simple) is the stripped-down senior view — no steward
   // chrome at all. It exits back to the dashboard via a button on the page
@@ -130,6 +144,9 @@ function AuthLayout() {
                       >
                         <Icon />
                         <span>{label}</span>
+                        {to === "/notifications" && (unreadCount.data?.count ?? 0) > 0 && (
+                          <Badge className="ml-auto">{unreadCount.data!.count}</Badge>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}

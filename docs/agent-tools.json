@@ -96,7 +96,7 @@
     {
       "type": "webhook",
       "name": "get_budgets",
-      "description": "List the member's budget categories with the monthly limit and how much they've spent so far this month.",
+      "description": "List the member's budget categories with the monthly limit, how much they've spent so far this month, how much is left (or how much they're over by), the percent used, and their pace (under, on_track, over, or exceeded).",
       "response_timeout_secs": 20,
       "api_schema": {
         "url": "{{BASE_URL}}/api/elevenlabs/tools/get_budgets",

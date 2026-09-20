@@ -158,7 +158,7 @@ function RouteComponent() {
             This page is a demo-only tool for simulating what happens to{" "}
             {activeMember?.preferredName ?? "this nester"}&apos;s mock bank data. Nothing here talks
             to a real bank. Post transactions by hand below, or fire one of the scripted demo beats
-            to show the caretaker/nester story live.
+            to show the trusted contact/nester story live.
           </p>
         </div>
       </div>

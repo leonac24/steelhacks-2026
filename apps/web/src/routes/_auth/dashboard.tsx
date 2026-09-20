@@ -20,6 +20,7 @@ import { NotificationsPanel } from "@/components/notifications-panel";
 import { useActiveMember } from "@/hooks/use-active-member";
 import { categoryMeta } from "@/lib/categories";
 import { formatCents, formatIsoDate, formatSignedCents } from "@/lib/format";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth/dashboard")({
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_auth/dashboard")({
 
 function RouteComponent() {
   const { activeMember, activeMemberId, isLoading: membersLoading } = useActiveMember();
+  const { data: session } = authClient.useSession();
   const enabled = !!activeMemberId;
 
   const summary = useQuery(
@@ -68,8 +70,10 @@ function RouteComponent() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">
-        {activeMember
-          ? `Welcome back — here's ${activeMember.preferredName}'s dashboard`
+        {session?.user.name
+          ? activeMember
+            ? `Welcome back ${session.user.name.split(" ")[0]} — here's ${activeMember.preferredName}'s dashboard`
+            : `Welcome back ${session.user.name.split(" ")[0]}`
           : "Welcome back"}
       </h1>
 

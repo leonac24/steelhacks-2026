@@ -63,7 +63,9 @@ export const DEFAULT_SETTINGS: NewSettings = {
   // an actual overnight window is plenty for "don't wake anyone up".
   quietHoursStart: "22:00",
   quietHoursEnd: "07:00",
-  maxCallsPerDay: 2,
+  // High enough that repeated demo-button clicks during a hackathon demo
+  // never silently hit the daily cap (was 2, too easy to exhaust testing).
+  maxCallsPerDay: 10,
   reminderMode: "call",
   voiceSpeed: 0.9,
   notifyCaretakerOnUnanswered: true,

@@ -1,5 +1,8 @@
 import { startInboundSession } from "@steelhacks-2026/api/services/call-sessions";
+import { voiceIdForAssistant } from "@steelhacks-2026/api/defaults";
+import { memberSettings } from "@steelhacks-2026/db/schema/index";
 import { createFileRoute } from "@tanstack/react-router";
+import { eq } from "drizzle-orm";
 import z from "zod";
 
 import { db } from "../../../services";
@@ -45,6 +48,18 @@ export const Route = createFileRoute("/api/elevenlabs/init")({
           ? `Hello ${member.preferredName}! This is June. Before we talk about your money, could you tell me your PIN?`
           : UNKNOWN_CALLER_MESSAGE;
 
+        // Outbound calls (alerts, "Call me") already pick a voice per the
+        // member's assistantName setting — inbound calls (the member dialing
+        // in) went through the agent's own default voice instead, so the
+        // same person could hear two different voices depending on who
+        // called whom. Look the setting up here too so it's consistent.
+        const settings = member
+          ? await db.query.memberSettings.findFirst({
+              where: eq(memberSettings.memberId, member.id),
+            })
+          : undefined;
+        const voiceId = voiceIdForAssistant(settings?.assistantName);
+
         return Response.json({
           type: "conversation_initiation_client_data",
           dynamic_variables: {
@@ -54,7 +69,10 @@ export const Route = createFileRoute("/api/elevenlabs/init")({
             call_reason: "member_inquiry",
             alert_detail: "",
           },
-          conversation_config_override: { agent: { first_message: firstMessage } },
+          conversation_config_override: {
+            agent: { first_message: firstMessage },
+            ...(voiceId ? { tts: { voice_id: voiceId } } : {}),
+          },
         });
       },
     },

@@ -242,7 +242,7 @@ function AlertsCard({ memberId }: { memberId: string }) {
         ) : (
           <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 gap-y-3 text-sm">
             <span className="text-muted-foreground text-xs uppercase" />
-            <span className="text-muted-foreground text-xs uppercase">Steward</span>
+            <span className="text-muted-foreground text-xs uppercase">Trusted contact</span>
             <span className="text-muted-foreground text-xs uppercase">Nester</span>
 
             {ALERT_ROWS.map((row) => {

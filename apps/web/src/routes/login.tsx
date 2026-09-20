@@ -18,9 +18,9 @@ export const Route = createFileRoute("/login")({
 });
 
 // Demo-only shortcut (real accounts are seeded by scripts/seed.ts): the
-// steward form accepts any password for maria@example.com and signs in as
-// Maria, the caretaker steward. Nesters don't self-serve sign-in at all —
-// their steward signs in and toggles into nester mode for them.
+// trusted contact form accepts any password for maria@example.com and signs in as
+// Maria, the demo trusted contact. Nesters don't self-serve sign-in at all —
+// their trusted contact signs in and toggles into nester mode for them.
 const STEWARD_DEMO_EMAIL = "maria@example.com";
 const STEWARD_CREDENTIALS = { email: "maria@demo.dev", password: "demo-password-123" };
 
@@ -46,7 +46,7 @@ function RouteComponent() {
                 active={mode === "steward"}
                 onClick={() => setMode("steward")}
                 icon={Users}
-                label="I'm a steward"
+                label="I'm a trusted contact"
               />
               <ModeTab
                 active={mode === "nester"}
@@ -92,10 +92,10 @@ function ModeTab({
   );
 }
 
-// Steward: caretakers/family managing a nester's finances. Real email +
+// Trusted contact: family managing a nester's finances. Real email +
 // password form, with one demo shortcut: dot@example.com + any password.
 // "Simulate new user" is a second shortcut for onboarding: instead of
-// signing into the existing demo steward, it mints a brand-new one with its
+// signing into the existing demo trusted contact, it mints a brand-new one with its
 // own fresh nester, so a fresh account walkthrough can be demoed too.
 function StewardSignIn() {
   const navigate = useNavigate();
@@ -120,8 +120,8 @@ function StewardSignIn() {
               void navigate({ to: "/onboarding" });
               toast.success(
                 result.bankConnected
-                  ? "New steward created — Demo Bank connected"
-                  : "New steward created",
+                  ? "New trusted contact created — Demo Bank connected"
+                  : "New trusted contact created",
               );
             },
             onError: (error) => {
@@ -184,7 +184,7 @@ function StewardSignIn() {
           <span>
             Simulate new user
             <span className="text-muted-foreground block text-xs">
-              Skip signing in — create a fresh steward + nester to demo onboarding.
+              Skip signing in — create a fresh trusted contact + nester to demo onboarding.
             </span>
           </span>
         </label>
@@ -234,7 +234,7 @@ function StewardSignIn() {
       {!simulateNewUser && (
         <p className="text-muted-foreground text-center text-xs">
           Demo: <span className="font-mono">{STEWARD_DEMO_EMAIL}</span> with any password signs
-          you in as the steward.
+          you in as the trusted contact.
         </p>
       )}
     </form>
@@ -242,12 +242,12 @@ function StewardSignIn() {
 }
 
 // Nester: the person being cared for. They don't sign in themselves — their
-// steward signs in and switches into nester mode for them from the sidebar.
+// trusted contact signs in and switches into nester mode for them from the sidebar.
 function NesterSignIn() {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
       <Info className="text-muted-foreground mt-0.5 size-5 shrink-0" />
-      <p>Have your steward log in and toggle your profile!</p>
+      <p>Have your trusted contact log in and toggle your profile!</p>
     </div>
   );
 }

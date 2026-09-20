@@ -51,7 +51,7 @@ function HomeComponent() {
         </span>
 
         <h1 className="font-display max-w-4xl text-5xl leading-[1.1] font-medium text-balance text-white [text-shadow:0_2px_18px_rgba(30,42,52,0.45)] sm:text-6xl lg:text-7xl">
-          The nest is empty. The egg shouldn&apos;t be.
+          The nest is empty. Your egg shouldn&apos;t be.
         </h1>
 
         <p className="mt-6 max-w-lg text-base text-white/85 [text-shadow:0_1px_10px_rgba(30,42,52,0.4)] sm:text-lg">

@@ -2,7 +2,7 @@
 // automatic post-sync checks in apps/web/src/routes/api/plaid/webhook.ts.
 import { ORPCError } from "@orpc/server";
 import { activityLog } from "@steelhacks-2026/db/schema/index";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import z from "zod";
 
 import { protectedProcedure, requireCaretaker, requirePrimaryCaretaker } from "../../index";
@@ -39,6 +39,7 @@ export const notificationsRouter = {
           summaryText: activityLog.summaryText,
           metadata: activityLog.metadata,
           createdAt: activityLog.createdAt,
+          readAt: activityLog.readAt,
         })
         .from(activityLog)
         .where(
@@ -59,4 +60,41 @@ export const notificationsRouter = {
     .input(memberInput)
     .use(requirePrimaryCaretaker)
     .handler(({ input, context }) => runOrThrow(() => runBudgetCheck(context.db, input.memberId))),
+
+  // Sidebar badge count. Budget warnings are live-computed, not persisted, so
+  // only the persisted fraud_suspected rows have a read/unread state to count.
+  unreadCount: protectedProcedure
+    .input(memberInput)
+    .use(requireCaretaker)
+    .handler(async ({ input, context }) => {
+      const [row] = await context.db
+        .select({ count: count() })
+        .from(activityLog)
+        .where(
+          and(
+            eq(activityLog.memberId, input.memberId),
+            eq(activityLog.type, "fraud_suspected"),
+            isNull(activityLog.readAt),
+          ),
+        );
+      return { count: row?.count ?? 0 };
+    }),
+
+  // Called when the caretaker opens /notifications; marks every currently
+  // unread fraud alert as read so the badge clears.
+  markAllRead: protectedProcedure
+    .input(memberInput)
+    .use(requireCaretaker)
+    .handler(({ input, context }) =>
+      context.db
+        .update(activityLog)
+        .set({ readAt: new Date() })
+        .where(
+          and(
+            eq(activityLog.memberId, input.memberId),
+            eq(activityLog.type, "fraud_suspected"),
+            isNull(activityLog.readAt),
+          ),
+        ),
+    ),
 };

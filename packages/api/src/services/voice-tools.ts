@@ -12,8 +12,10 @@ import {
   user,
 } from "@steelhacks-2026/db/schema/index";
 import {
+  budgetStatus,
   canAfford,
   formatCentsForSpeech,
+  monthRange,
   todayInTimezone,
   type CashFlowInput,
 } from "@steelhacks-2026/finance";
@@ -198,7 +200,8 @@ export async function checkAffordability(
 }
 
 export async function getBudgets(db: Database, member: MemberRow) {
-  const monthStart = `${todayInTimezone(member.timezone).slice(0, 8)}01`;
+  const today = todayInTimezone(member.timezone);
+  const month = monthRange(today);
   const [budgets, spendRows] = await Promise.all([
     db.select().from(budget).where(eq(budget.memberId, member.id)).orderBy(asc(budget.category)),
     db
@@ -211,7 +214,7 @@ export async function getBudgets(db: Database, member: MemberRow) {
         and(
           eq(transaction.memberId, member.id),
           gt(transaction.amountCents, 0),
-          gte(transaction.date, monthStart),
+          gte(transaction.date, month.from),
         ),
       )
       .groupBy(transaction.category),
@@ -219,11 +222,24 @@ export async function getBudgets(db: Database, member: MemberRow) {
   const spentByCategory = new Map(spendRows.map((r) => [r.category, Number(r.total)]));
   return {
     ok: true,
-    budgets: budgets.map((b) => ({
-      category: b.category,
-      monthly_limit_spoken: formatCentsForSpeech(b.monthlyLimitCents),
-      spent_so_far_spoken: formatCentsForSpeech(spentByCategory.get(b.category) ?? 0),
-    })),
+    budgets: budgets.map((b) => {
+      const spent = spentByCategory.get(b.category) ?? 0;
+      const status = budgetStatus(b.monthlyLimitCents, spent, month);
+      const exceeded = status.remainingCents < 0;
+      return {
+        category: b.category,
+        monthly_limit_spoken: formatCentsForSpeech(b.monthlyLimitCents),
+        spent_so_far_spoken: formatCentsForSpeech(spent),
+        // Read together: "$62 left" or, once over, "$0 left, $15 over".
+        remaining_spoken: exceeded ? "$0" : formatCentsForSpeech(status.remainingCents),
+        over_by_spoken: exceeded ? formatCentsForSpeech(-status.remainingCents) : null,
+        percent_used_spoken: `${status.percentUsed} percent`,
+        // "under": well under pace. "on_track": normal for this point in the
+        // month. "over": on pace to exceed by month end. "exceeded": already
+        // over the limit. Say this in plain words, not the label itself.
+        pace: status.pace,
+      };
+    }),
   };
 }
 

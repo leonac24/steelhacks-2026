@@ -12,7 +12,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 
 import { useActiveMember } from "@/hooks/use-active-member";
 
-// Dropdown next to the logo for switching which nester (member) the steward
+// Dropdown next to the logo for switching which nester the trusted contact
 // is looking at — same picker style whether they have one nester or several.
 // The dropdown itself only names the nester; "'s NestEgg" sits outside it as
 // plain text so the dropdown affordance stays just the name.
