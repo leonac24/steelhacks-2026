@@ -76,7 +76,7 @@ function DemoRoute() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
       <div>
-        <h1 className="text-xl font-semibold">Demo controls</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Demo controls</h1>
         <p className="text-sm text-muted-foreground">
           Acting on {member?.preferredName}. Keep{" "}
           <Link to="/dashboard" className="underline underline-offset-4">

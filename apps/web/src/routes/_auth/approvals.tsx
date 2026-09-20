@@ -26,7 +26,7 @@ function ApprovalsRoute() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
       <div>
-        <h1 className="text-xl font-semibold">Approvals</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Approvals</h1>
         <p className="text-sm text-muted-foreground">
           Changes {member?.preferredName} asked for that need your decision.
         </p>

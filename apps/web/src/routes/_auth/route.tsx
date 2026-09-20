@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 
+import { Logo } from "@/components/logo";
 import { MemberSwitcher } from "@/components/member-switcher";
 import UserMenu from "@/components/user-menu";
 import { getUser } from "@/functions/get-user";
@@ -67,11 +68,9 @@ function AuthLayout() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <Link to="/" className="flex items-center gap-2 px-2 py-1.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              B
-            </span>
-            <span className="text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
-              Better Track
+            <Logo size={26} />
+            <span className="text-sm font-bold tracking-tight group-data-[collapsible=icon]:hidden">
+              NestEgg
             </span>
           </Link>
         </SidebarHeader>
@@ -106,7 +105,9 @@ function AuthLayout() {
             <UserMenu />
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
+        <div
+          className={`flex-1 overflow-y-auto p-4 sm:p-6 ${activePath.startsWith("/dashboard") ? "bg-white" : "bg-background"}`}
+        >
           <Outlet />
         </div>
       </SidebarInset>

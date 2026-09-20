@@ -5,8 +5,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@steelhacks-2026/ui/components/card";
-import { Progress } from "@steelhacks-2026/ui/components/progress";
+import {
+  ProgressIndicator,
+  ProgressPrimitive,
+  ProgressTrack,
+} from "@steelhacks-2026/ui/components/progress";
 import { Skeleton } from "@steelhacks-2026/ui/components/skeleton";
+import { cn } from "@steelhacks-2026/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
@@ -61,7 +66,7 @@ function RouteComponent() {
   const topSpend = topCategories.reduce((sum, c) => sum + c.totalCents, 0) || 1;
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4">
+    <div className="theme-gold mx-auto flex max-w-6xl flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">
         Welcome back{activeMember ? `, ${activeMember.preferredName}'s dashboard` : ""}
       </h1>
@@ -72,6 +77,7 @@ function RouteComponent() {
         <StatCard
           label="Safe to spend today"
           value={summary.data ? formatCents(summary.data.safeToSpendCents) : undefined}
+          hero
         />
         <StatCard
           label="Available balance"
@@ -125,11 +131,18 @@ function RouteComponent() {
                     </span>
                     <span className="text-muted-foreground">{formatCents(c.totalCents)}</span>
                   </div>
-                  <Progress value={(c.totalCents / topSpend) * 100} />
+                  <ProgressPrimitive.Root value={(c.totalCents / topSpend) * 100}>
+                    <ProgressTrack>
+                      <ProgressIndicator className="bg-gradient-to-r from-amber-400 to-amber-600" />
+                    </ProgressTrack>
+                  </ProgressPrimitive.Root>
                 </div>
               );
             })}
-            <Link to="/budget" className="text-sm text-primary hover:underline">
+            <Link
+              to="/budget"
+              className="bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-sm font-medium text-transparent hover:underline"
+            >
               View budget →
             </Link>
           </CardContent>
@@ -150,21 +163,24 @@ function RouteComponent() {
             return (
               <div key={t.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-muted">
-                    <meta.icon className="size-4 text-muted-foreground" />
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-amber-200">
+                    <meta.icon className="size-4 text-amber-800" />
                   </span>
                   <div>
                     <p className="text-sm font-medium">{t.merchantName ?? "Unknown"}</p>
                     <p className="text-muted-foreground text-xs">{formatIsoDate(t.date)}</p>
                   </div>
                 </div>
-                <span className={t.amountCents < 0 ? "font-medium text-green-500" : "font-medium"}>
+                <span className={t.amountCents < 0 ? "font-medium text-emerald-600" : "font-medium"}>
                   {formatSignedCents(t.amountCents)}
                 </span>
               </div>
             );
           })}
-          <Link to="/transactions" className="pt-2 text-sm text-primary hover:underline">
+          <Link
+            to="/transactions"
+            className="bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text pt-2 text-sm font-medium text-transparent hover:underline"
+          >
             View all transactions →
           </Link>
         </CardContent>
@@ -173,9 +189,28 @@ function RouteComponent() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | undefined }) {
+function StatCard({
+  label,
+  value,
+  hero = false,
+}: {
+  label: string;
+  value: string | undefined;
+  hero?: boolean;
+}) {
   return (
-    <Card>
+    <Card
+      className={cn(
+        "relative overflow-hidden",
+        hero && "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white",
+      )}
+    >
+      {hero && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-gradient-to-br from-amber-300/40 to-amber-500/0 blur-2xl"
+        />
+      )}
       <CardHeader className="pb-2">
         <CardDescription>{label}</CardDescription>
       </CardHeader>
@@ -183,7 +218,15 @@ function StatCard({ label, value }: { label: string; value: string | undefined }
         {value === undefined ? (
           <Skeleton className="h-8 w-24" />
         ) : (
-          <p className="text-2xl font-semibold tracking-tight">{value}</p>
+          <p
+            className={cn(
+              "text-2xl font-semibold tracking-tight",
+              hero &&
+                "bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 bg-clip-text text-3xl text-transparent",
+            )}
+          >
+            {value}
+          </p>
         )}
       </CardContent>
     </Card>

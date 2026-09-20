@@ -75,6 +75,7 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
 
 export {
   Progress,
+  ProgressPrimitive,
   ProgressTrack,
   ProgressIndicator,
   ProgressLabel,
