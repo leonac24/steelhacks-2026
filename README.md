@@ -1,6 +1,6 @@
-# NestEgg — Phone Banking for Elders
+# NestEgg — Phone Financial Advice for Elders
 
-NestEgg helps older adults understand and manage their money **by phone call** — no app, no login, no PIN-typing on a tiny screen. A user calls the phone assistant Robin (or Robin calls them) and talks through balances, bills, and spending in plain language. A family caretaker links the bank account, sets budgets and safety rules, and supervises everything from a web dashboard.
+NestEgg helps older adults understand and manage their budget **by phone call** — no app, no login, no PIN-typing on a tiny screen. A user calls the phone assistant Robin (or Robin calls them) and talks through balances, bills, and spending in plain language. A family caretaker links the bank account, sets budgets and safety rules, and supervises everything from a web dashboard.
 
 See [`CONTEXT.md`](./CONTEXT.md) for the full glossary of terms (user, Caretaker, Change Request, Alert, Safe to Spend, etc.) used throughout the code and docs.
 
