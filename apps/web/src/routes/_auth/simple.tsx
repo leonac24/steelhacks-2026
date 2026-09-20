@@ -1,6 +1,6 @@
 // The senior interface. Same data as the caretaker dashboard, stripped to what
 // a member actually needs: how much is safe to spend, what's due, and one
-// button to call June.
+// button to call their assistant (Jay or Robin, per their settings).
 //
 // Accessibility rules for this file: body text never below 20px, touch targets
 // at least 64px tall, real contrast, no information carried by colour alone,
@@ -42,6 +42,7 @@ function SimpleView({ memberId }: { memberId: string }) {
     ...orpc.caretaker.members.summary.queryOptions({ input: { memberId } }),
     refetchInterval: 5000,
   });
+  const settings = useQuery(orpc.caretaker.settings.get.queryOptions({ input: { memberId } }));
 
   if (!summary.data) {
     return (
@@ -52,6 +53,9 @@ function SimpleView({ memberId }: { memberId: string }) {
   }
 
   const s = summary.data;
+  // Falls back to a generic label rather than guessing a name before
+  // settings has loaded — this page shouldn't ever show the wrong assistant.
+  const assistantName = settings.data?.assistantName ?? "your assistant";
   const unfunded = s.upcomingBills.filter((b) => !b.covered);
 
   return (
@@ -75,7 +79,7 @@ function SimpleView({ memberId }: { memberId: string }) {
         href={`tel:${SUPPORT_PHONE}`}
         className="flex min-h-20 w-full items-center justify-center bg-primary px-6 text-center text-3xl font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ring"
       >
-        Call Robin
+        Call {assistantName}
       </a>
       <p className="-mt-4 text-center text-lg text-muted-foreground">
         or dial {SUPPORT_PHONE_DISPLAY} from any phone
@@ -135,10 +139,10 @@ function SimpleView({ memberId }: { memberId: string }) {
 
       <section aria-labelledby="alerts-heading">
         <h2 id="alerts-heading" className="mb-3 text-2xl font-semibold">
-          Recent calls from Robin
+          Recent calls from {assistantName}
         </h2>
         {s.recentAlerts.length === 0 ? (
-          <p className="text-muted-foreground">Robin hasn't needed to call you.</p>
+          <p className="text-muted-foreground">{assistantName} hasn't needed to call you.</p>
         ) : (
           <ul className="space-y-3">
             {s.recentAlerts.map((alert, i) => (
@@ -155,7 +159,7 @@ function SimpleView({ memberId }: { memberId: string }) {
           to="/dashboard"
           className="text-base text-muted-foreground underline underline-offset-4 hover:text-foreground"
         >
-          Exit nester mode
+          Exit simplified view
         </Link>
       </div>
     </div>

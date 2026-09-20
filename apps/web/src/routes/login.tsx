@@ -5,7 +5,7 @@ import { Input } from "@steelhacks-2026/ui/components/input";
 import { Label } from "@steelhacks-2026/ui/components/label";
 import { cn } from "@steelhacks-2026/ui/lib/utils";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Armchair, Beaker, Info, Users } from "lucide-react";
+import { Armchair, FlaskConical, Info, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/login")({
 // Demo-only shortcut (real accounts are seeded by scripts/seed.ts): the
 // trusted contact form accepts any password for maria@example.com and signs in as
 // Maria, the demo trusted contact. Nesters don't self-serve sign-in at all —
-// their trusted contact signs in and toggles into nester mode for them.
+// their trusted contact signs in and toggles into simplified view for them.
 const STEWARD_DEMO_EMAIL = "maria@example.com";
 const STEWARD_CREDENTIALS = { email: "maria@demo.dev", password: "demo-password-123" };
 
@@ -113,69 +113,59 @@ function ModeTab({
   );
 }
 
-// Trusted contact: family managing a nester's finances. Real email +
-// password form, with one demo shortcut: dot@example.com + any password.
-// "Simulate new user" is a second shortcut for onboarding: instead of
-// signing into the existing demo trusted contact, it mints a brand-new one with its
-// own fresh nester, so a fresh account walkthrough can be demoed too.
+type AuthTab = "signin" | "signup";
+
+// Trusted contact: family managing a nester's finances. Two ordinary tabs —
+// sign in (email + password, with a demo shortcut) and sign up (name, ages,
+// nester info, phone). Sign up always goes through the dev.simulateNewUser
+// shortcut under the hood, since there's no separate production registration
+// flow yet, but it's presented as a normal signup form rather than gated
+// behind a "simulate new user" checkbox.
 function StewardSignIn() {
+  const [authTab, setAuthTab] = useState<AuthTab>("signin");
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1 text-sm">
+        <button
+          type="button"
+          onClick={() => setAuthTab("signin")}
+          className={cn(
+            "rounded-md py-1.5 font-medium transition-colors",
+            authTab === "signin"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          onClick={() => setAuthTab("signup")}
+          className={cn(
+            "rounded-md py-1.5 font-medium transition-colors",
+            authTab === "signup"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Sign up
+        </button>
+      </div>
+      {authTab === "signin" ? <StewardSignInForm /> : <StewardSignUpForm />}
+    </div>
+  );
+}
+
+function StewardSignInForm() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [simulateNewUser, setSimulateNewUser] = useState(false);
-  const [connectDemoBank, setConnectDemoBank] = useState(true);
-  const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [nesterName, setNesterName] = useState("");
-  const [nesterAge, setNesterAge] = useState("");
-
-  function fillRandomDemoNames() {
-    setName(pickRandom(FAKE_STEWARD_NAMES));
-    setAge(String(randomInt(35, 68)));
-    setNesterName(pickRandom(FAKE_NESTER_NAMES));
-    setNesterAge(String(randomInt(70, 92)));
-  }
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setIsSigningIn(true);
-
-    if (simulateNewUser) {
-      try {
-        const result = await client.dev.simulateNewUser({
-          connectDemoBank,
-          phone,
-          name: name.trim() || undefined,
-          age: age.trim() ? Number(age) : undefined,
-          nesterName: nesterName.trim() || undefined,
-          nesterAge: nesterAge.trim() ? Number(nesterAge) : undefined,
-        });
-        await authClient.signIn.email(
-          { email: result.email, password: result.password },
-          {
-            onSuccess: () => {
-              void navigate({ to: "/onboarding" });
-              toast.success(
-                result.bankConnected
-                  ? "New trusted contact created — Demo Bank connected"
-                  : "New trusted contact created",
-              );
-            },
-            onError: (error) => {
-              setIsSigningIn(false);
-              toast.error(error.error.message || error.error.statusText);
-            },
-          },
-        );
-      } catch (error) {
-        setIsSigningIn(false);
-        toast.error(error instanceof Error ? error.message : "Couldn't simulate a new user");
-      }
-      return;
-    }
-
     const isDemoShortcut = email.trim().toLowerCase() === STEWARD_DEMO_EMAIL;
     const credentials = isDemoShortcut ? STEWARD_CREDENTIALS : { email, password };
     await authClient.signIn.email(credentials, {
@@ -195,8 +185,7 @@ function StewardSignIn() {
           id="steward-email"
           type="email"
           autoComplete="email"
-          required={!simulateNewUser}
-          disabled={simulateNewUser}
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -207,140 +196,157 @@ function StewardSignIn() {
           id="steward-password"
           type="password"
           autoComplete="current-password"
-          required={!simulateNewUser}
-          disabled={simulateNewUser}
+          required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-
-      <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
-        <label className="flex items-start gap-2 text-sm">
-          <Checkbox
-            checked={simulateNewUser}
-            onCheckedChange={(checked) => setSimulateNewUser(checked === true)}
-          />
-          <span>
-            Simulate new user
-            <span className="text-muted-foreground block text-xs">
-              Skip signing in — create a fresh trusted contact + nester to demo onboarding.
-            </span>
-          </span>
-        </label>
-        {simulateNewUser && (
-          <div className="space-y-3 pl-6">
-            <div className="space-y-1">
-              <Label htmlFor="simulate-name" className="text-xs">
-                Your name
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="simulate-name"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  title="Fill with random demo names"
-                  onClick={fillRandomDemoNames}
-                >
-                  <Beaker className="size-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="simulate-age" className="text-xs">
-                Your age (optional)
-              </Label>
-              <Input
-                id="simulate-age"
-                type="number"
-                min={1}
-                max={120}
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="simulate-nester-name" className="text-xs">
-                Your nester's name
-              </Label>
-              <Input
-                id="simulate-nester-name"
-                required
-                value={nesterName}
-                onChange={(e) => setNesterName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="simulate-nester-age" className="text-xs">
-                Your nester's age (optional)
-              </Label>
-              <Input
-                id="simulate-nester-age"
-                type="number"
-                min={1}
-                max={120}
-                value={nesterAge}
-                onChange={(e) => setNesterAge(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="simulate-phone" className="text-xs">
-                Your phone number
-              </Label>
-              <Input
-                id="simulate-phone"
-                type="tel"
-                placeholder="+1 412 555 0142"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-              <p className="text-muted-foreground text-xs">
-                So we can eventually give you a call as part of the demo.
-              </p>
-            </div>
-            <label className="flex items-start gap-2 text-sm">
-              <Checkbox
-                checked={connectDemoBank}
-                onCheckedChange={(checked) => setConnectDemoBank(checked === true)}
-              />
-              <span>
-                Automatically connect Demo Bank
-                <span className="text-muted-foreground block text-xs">
-                  Backfills real Plaid Sandbox transaction history right away.
-                </span>
-              </span>
-            </label>
-          </div>
-        )}
-      </div>
-
       <Button type="submit" className="w-full" disabled={isSigningIn}>
-        {isSigningIn
-          ? simulateNewUser
-            ? "Creating…"
-            : "Signing in..."
-          : simulateNewUser
-            ? "Create demo account"
-            : "Sign In"}
+        {isSigningIn ? "Signing in..." : "Sign In"}
       </Button>
-      {!simulateNewUser && (
-        <p className="text-muted-foreground text-center text-xs">
-          Demo: <span className="font-mono">{STEWARD_DEMO_EMAIL}</span> with any password signs
-          you in as the trusted contact.
+      <p className="text-muted-foreground text-center text-xs">
+        Demo: <span className="font-mono">{STEWARD_DEMO_EMAIL}</span> with any password signs you
+        in as the trusted contact.
+      </p>
+    </form>
+  );
+}
+
+function StewardSignUpForm() {
+  const navigate = useNavigate();
+  const [isCreating, setIsCreating] = useState(false);
+  const [seedDemoBank, setSeedDemoBank] = useState(true);
+  const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [nesterName, setNesterName] = useState("");
+  const [nesterAge, setNesterAge] = useState("");
+
+  function fillRandomDemoNames() {
+    setName(pickRandom(FAKE_STEWARD_NAMES));
+    setAge(String(randomInt(35, 68)));
+    setNesterName(pickRandom(FAKE_NESTER_NAMES));
+    setNesterAge(String(randomInt(70, 92)));
+  }
+
+  async function signUp(e: React.FormEvent) {
+    e.preventDefault();
+    setIsCreating(true);
+    try {
+      const result = await client.dev.simulateNewUser({
+        connectDemoBank: seedDemoBank,
+        phone,
+        name: name.trim() || undefined,
+        age: age.trim() ? Number(age) : undefined,
+        nesterName: nesterName.trim() || undefined,
+        nesterAge: nesterAge.trim() ? Number(nesterAge) : undefined,
+      });
+      await authClient.signIn.email(
+        { email: result.email, password: result.password },
+        {
+          onSuccess: () => {
+            void navigate({ to: "/onboarding" });
+            toast.success(
+              result.bankConnected
+                ? "Account created — Demo Bank connected"
+                : "Account created",
+            );
+          },
+          onError: (error) => {
+            setIsCreating(false);
+            toast.error(error.error.message || error.error.statusText);
+          },
+        },
+      );
+    } catch (error) {
+      setIsCreating(false);
+      toast.error(error instanceof Error ? error.message : "Couldn't create an account");
+    }
+  }
+
+  return (
+    <form onSubmit={signUp} className="flex flex-col gap-4">
+      <div className="space-y-1">
+        <Label htmlFor="signup-name">Your name</Label>
+        <div className="flex gap-2">
+          <Input id="signup-name" required value={name} onChange={(e) => setName(e.target.value)} />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            title="Fill with random demo names"
+            onClick={fillRandomDemoNames}
+          >
+            <FlaskConical className="size-4" />
+          </Button>
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="signup-age">Your age (optional)</Label>
+        <Input
+          id="signup-age"
+          type="number"
+          min={1}
+          max={120}
+          value={age}
+          onChange={(e) => setAge(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="signup-nester-name">Your nester's name</Label>
+        <Input
+          id="signup-nester-name"
+          required
+          value={nesterName}
+          onChange={(e) => setNesterName(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="signup-nester-age">Your nester's age (optional)</Label>
+        <Input
+          id="signup-nester-age"
+          type="number"
+          min={1}
+          max={120}
+          value={nesterAge}
+          onChange={(e) => setNesterAge(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="signup-phone">Phone number</Label>
+        <Input
+          id="signup-phone"
+          type="tel"
+          placeholder="+1 412 555 0142"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <p className="text-muted-foreground text-xs">
+          So we can eventually give you a call as part of the demo.
         </p>
-      )}
+      </div>
+      <label className="flex items-start gap-2 text-sm">
+        <Checkbox
+          checked={seedDemoBank}
+          onCheckedChange={(checked) => setSeedDemoBank(checked === true)}
+        />
+        <span>
+          Seed
+          <span className="text-muted-foreground block text-xs">
+            Connects Demo Bank and backfills real Plaid Sandbox transaction history right away.
+          </span>
+        </span>
+      </label>
+      <Button type="submit" className="w-full" disabled={isCreating}>
+        {isCreating ? "Creating…" : "Create account"}
+      </Button>
     </form>
   );
 }
 
 // Nester: the person being cared for. They don't sign in themselves — their
-// trusted contact signs in and switches into nester mode for them from the sidebar.
+// trusted contact signs in and switches into simplified view for them from the sidebar.
 function NesterSignIn() {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">

@@ -66,7 +66,17 @@ export async function createMember(db: Database, input: CreateMemberInput): Prom
   const memberId = crypto.randomUUID();
   const consentedAt = input.consented ? new Date() : null;
 
-  const [created] = await db.batch([
+  // Inbound calls (call-sessions.ts) and outbound alert calls both resolve a
+  // caller by phoneE164 alone with no tiebreak, so two members sharing a
+  // number makes that lookup pick an arbitrary one — wrong PIN check, wrong
+  // assistant voice, wrong everything. Only one member can own a phone
+  // number at a time; reusing one (e.g. repeat "simulate new user" demo
+  // signups from the same real tester phone) retires the older claim.
+  const [, created] = await db.batch([
+    db
+      .update(member)
+      .set({ phoneE164: "" })
+      .where(eq(member.phoneE164, input.phoneE164)),
     db
       .insert(member)
       .values({

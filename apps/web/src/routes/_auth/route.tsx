@@ -106,7 +106,7 @@ function AuthLayout() {
     }),
   );
 
-  // Nester mode (/simple) is the stripped-down senior view — no steward
+  // Simplified view (/simple) is the stripped-down senior view — no steward
   // chrome at all. It exits back to the dashboard via a button on the page
   // itself, not from a sidebar that isn't there.
   if (activePath.startsWith("/simple")) {
@@ -158,9 +158,9 @@ function AuthLayout() {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton render={<Link to="/simple" />} tooltip="Enter nester mode">
+              <SidebarMenuButton render={<Link to="/simple" />} tooltip="Enter simplified view">
                 <Armchair />
-                <span>Enter nester mode</span>
+                <span>Enter simplified view</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

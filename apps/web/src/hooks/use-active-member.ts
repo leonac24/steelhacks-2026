@@ -7,7 +7,7 @@ import { orpc } from "@/utils/orpc";
 // Which member (nester) every interface is currently showing — the
 // caretaker dashboard, the sidebar switcher, and the senior view all read
 // from this single source (localStorage-backed via useAppState) so switching
-// nesters never falls out of sync between the steward tools and nester mode.
+// nesters never falls out of sync between the steward tools and simplified view.
 export function useActiveMember() {
   const { activeMemberId: storedId, setActiveMemberId } = useAppState();
   const membersQuery = useQuery(orpc.caretaker.members.list.queryOptions());
