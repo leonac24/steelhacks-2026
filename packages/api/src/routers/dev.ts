@@ -6,12 +6,13 @@ import { z } from "zod";
 
 import { devProcedure, publicDevProcedure, requirePrimaryCaretaker } from "../index";
 import { injectMockTransaction } from "../providers/mock";
-import * as alerts from "../services/alerts";
+import { runAlertsForMember } from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
 import { connectDemoBank } from "../services/demo-bank";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
 import * as onboarding from "../services/onboarding";
 import { normalizePhone } from "../services/onboarding-rules";
+import { createElevenLabsPlaceCall } from "../services/outbound-calls";
 
 // A handful of plausible nesters for the "simulate new user" shortcut — just
 // enough variety that repeat demos don't all look identical.
@@ -32,11 +33,6 @@ const DEMO_STEWARDS = [
   "Grace Lindqvist",
 ] as const;
 
-function randomDemoPhone(): string {
-  const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join("");
-  return `+1555${digits}`;
-}
-
 function randomPin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
@@ -55,6 +51,16 @@ async function checkAfterNewTransactions(
   if (fraud.status === "rejected") console.error(`${source}: fraud check failed`, fraud.reason);
   if (budgets.status === "rejected")
     console.error(`${source}: budget check failed`, budgets.reason);
+}
+
+function placeCallFor(context: { elevenLabsEnv?: import("../services/outbound-calls").ElevenLabsCallEnv }) {
+  if (!context.elevenLabsEnv) {
+    throw new ORPCError("PRECONDITION_FAILED", {
+      message:
+        "ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID, and ELEVENLABS_PHONE_NUMBER_ID must be set",
+    });
+  }
+  return createElevenLabsPlaceCall(context.elevenLabsEnv);
 }
 
 export const devRouter = {
@@ -113,22 +119,18 @@ export const devRouter = {
         ? await context.injectPlaidTransaction(input)
         : await injectMockTransaction(context.db, input);
 
-      // Two independent notification channels off the same new transactions:
-      // the rule-based alerts engine (may place a voice call), and Gemini
-      // fraud + budget-pace checks (land on the caretaker's dashboard/email).
-      const [dispatched] = await Promise.all([
-        alerts.dispatch(context.db, input.memberId, {
-          newTransactions: sync.added,
-          elevenLabs: context.elevenLabs,
-        }),
-        checkAfterNewTransactions(
-          context.db,
-          input.memberId,
-          sync.added.length,
-          "dev.injectTransaction",
-        ),
-      ]);
-      return { ...sync, ...dispatched };
+      const alerts = context.elevenLabsEnv
+        ? await runAlertsForMember(context.db, placeCallFor(context), input.memberId)
+        : undefined;
+
+      // Fraud + budget checks are independent of the voice engine.
+      await checkAfterNewTransactions(
+        context.db,
+        input.memberId,
+        sync.added.length,
+        "dev.injectTransaction",
+      );
+      return { ...sync, alerts };
     }),
 
   // Syncs the bank, then calls about anything worth calling about.
@@ -136,11 +138,8 @@ export const devRouter = {
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      const sync = await context.bankProviderInstance.syncTransactions(input.memberId);
-      return alerts.dispatch(context.db, input.memberId, {
-        newTransactions: sync.added,
-        elevenLabs: context.elevenLabs,
-      });
+      await context.bankProviderInstance.syncTransactions(input.memberId);
+      return runAlertsForMember(context.db, placeCallFor(context), input.memberId);
     }),
 
   // Settles every overdue approval now instead of waiting for cron.
@@ -186,7 +185,10 @@ export const devRouter = {
         caretakerUserId: newUser.id,
         fullName: nester.fullName,
         preferredName: nester.preferredName,
-        phoneE164: randomDemoPhone(),
+        // The same real number just collected for the steward's account —
+        // not a random undialable one — so outbound demo calls (which dial
+        // member.phoneE164) actually reach the person testing the demo.
+        phoneE164: phone,
         pin: randomPin(),
         timezone: "America/New_York",
         consented: true,

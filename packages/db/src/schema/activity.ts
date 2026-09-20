@@ -26,6 +26,10 @@ export const callSession = pgTable(
     verified: boolean("verified").notNull().default(false),
     pinAttempts: integer("pin_attempts").notNull().default(0),
     summaryText: text("summary_text"),
+    // Trimmed post-call transcript: [{ role, message, timeInCallSecs }]
+    transcript: jsonb("transcript").$type<
+      Array<{ role: "agent" | "user"; message: string | null; timeInCallSecs: number | null }>
+    >(),
     startedAt: timestamp("started_at").defaultNow().notNull(),
     endedAt: timestamp("ended_at"),
     ...timestamps(),

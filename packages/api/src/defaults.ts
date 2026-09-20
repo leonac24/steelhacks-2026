@@ -10,6 +10,24 @@ type NewAlertRule = Omit<typeof alertRule.$inferInsert, "memberId">;
 type NewBudget = Omit<typeof budget.$inferInsert, "memberId">;
 type NewSettings = Omit<typeof memberSettings.$inferInsert, "memberId">;
 
+// ElevenLabs premade voices (available on every account by default), picked
+// to match each persona's blurb from onboarding: Jay is bright and to the
+// point, Robin is warm and a little slower.
+export const ASSISTANT_VOICE_IDS: Record<"Jay" | "Robin", string> = {
+  Jay: "TxGEqnHWrfWFTfGW9XjX", // Josh
+  Robin: "EXAVITQu4vr4xnSDxMaL", // Bella
+};
+
+// memberSettings.assistantName is a plain text column (not a pg enum), so a
+// row written before this feature existed — or edited outside the app —
+// could hold anything. Fall back to the agent's own configured voice rather
+// than throwing.
+export function voiceIdForAssistant(assistantName: string | undefined): string | undefined {
+  return assistantName && assistantName in ASSISTANT_VOICE_IDS
+    ? ASSISTANT_VOICE_IDS[assistantName as keyof typeof ASSISTANT_VOICE_IDS]
+    : undefined;
+}
+
 // Safer changes apply instantly; loosening protections needs caretaker approval.
 export const DEFAULT_PERMISSIONS: NewPermission[] = [
   { changeType: "budget_decrease", tier: "instant", onTimeout: "expire" },

@@ -1,6 +1,7 @@
 import * as activity from "@steelhacks-2026/api/services/activity";
-import * as alerts from "@steelhacks-2026/api/services/alerts";
+import { runAlertsForMember } from "@steelhacks-2026/api/services/alerts";
 import { runBudgetCheck, runFraudCheck } from "@steelhacks-2026/api/services/notifications";
+import { createElevenLabsPlaceCall } from "@steelhacks-2026/api/services/outbound-calls";
 import { bankConnection } from "@steelhacks-2026/db/schema/index";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
@@ -51,11 +52,11 @@ export const Route = createFileRoute("/api/plaid/webhook")({
             // finish on serverless, but none of them can fail the webhook
             // ack Plaid is waiting on.
             if (result.added.length > 0) {
+              const env = elevenLabsConfig();
               const [dispatched, fraud, budgets] = await Promise.allSettled([
-                alerts.dispatch(db, connection.memberId, {
-                  newTransactions: result.added,
-                  elevenLabs: elevenLabsConfig(),
-                }),
+                env
+                  ? runAlertsForMember(db, createElevenLabsPlaceCall(env), connection.memberId)
+                  : Promise.resolve(undefined),
                 runFraudCheck(db, connection.memberId),
                 runBudgetCheck(db, connection.memberId),
               ]);
