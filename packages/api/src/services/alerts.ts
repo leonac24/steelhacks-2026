@@ -25,6 +25,7 @@ import type { TransactionRow } from "../providers/types";
 import * as activity from "./activity";
 import { startOutboundSession } from "./call-sessions";
 import { memberSummary, type MemberSummary } from "./member-summary";
+import { notifyCaretakers } from "./notify";
 import type { PlaceCallFn } from "./outbound-calls";
 
 export type AlertRuleType = (typeof alertRuleType.enumValues)[number];
@@ -43,6 +44,7 @@ export const RULE_LABELS: Record<AlertRuleType, string> = {
   bill_due_unfunded: "a bill due soon",
   unusual_txn: "an unusual charge",
   deposit_arrived: "a deposit that arrived",
+  budget_reached: "a budget you've reached",
 };
 
 const CALL_REASON: Record<AlertRuleType, string> = {
@@ -50,7 +52,12 @@ const CALL_REASON: Record<AlertRuleType, string> = {
   bill_due_unfunded: "bill_due_unfunded",
   unusual_txn: "unusual_transaction",
   deposit_arrived: "deposit_arrived",
+  budget_reached: "budget_reached",
 };
+
+// Alert types that also notify the steward (caretaker) by email — the voice
+// call is the member-facing channel, email is the steward-facing one.
+const EMAILABLE_TYPES: AlertRuleType[] = ["unusual_txn", "deposit_arrived"];
 
 function buildFirstMessage(ruleType: AlertRuleType, name: string): string {
   switch (ruleType) {
@@ -62,6 +69,8 @@ function buildFirstMessage(ruleType: AlertRuleType, name: string): string {
       return `Hi ${name}, it's June about a charge on your account I want to check with you — but first, could you tell me your PIN?`;
     case "deposit_arrived":
       return `Hi ${name}, it's June with some good news about a deposit — but first, could you tell me your PIN?`;
+    case "budget_reached":
+      return `Hi ${name}, it's June about a budget you've reached — but first, could you tell me your PIN?`;
   }
 }
 
@@ -248,6 +257,7 @@ export async function runAlertsForMember(
       .from(transaction)
       .where(and(eq(transaction.memberId, memberId), eq(transaction.pending, false))),
   ]);
+  const notifyMap = new Map(rules.map((r) => [r.type, r]));
 
   const threeDaysAgo = addDays(today, -3);
   const ninetyDaysAgo = addDays(today, -90);
@@ -294,6 +304,24 @@ export async function runAlertsForMember(
       continue;
     }
 
+    const rule = notifyMap.get(candidate.ruleType);
+    const notifyNester = rule?.notifyNester ?? true;
+    const notifySteward = rule?.notifySteward ?? true;
+    const summaryText = candidate.dynamicVariables.alert_detail ?? RULE_LABELS[candidate.ruleType];
+    const emailSteward = () =>
+      EMAILABLE_TYPES.includes(candidate.ruleType) && notifySteward
+        ? notifyCaretakers(db, memberId, summaryText)
+        : Promise.resolve();
+
+    if (!notifyNester) {
+      // The member opted out of this one; still tell the steward by email
+      // (if they're opted in) and record it so we don't re-evaluate forever.
+      await emailSteward();
+      await db.update(alertSent).set({ status: "answered", channel: "email" }).where(eq(alertSent.id, alertRow.id));
+      stats.skipped++;
+      continue;
+    }
+
     if (settings?.reminderMode !== "call") {
       await db.update(alertSent).set({ status: "skipped" }).where(eq(alertSent.id, alertRow.id));
       stats.skipped++;
@@ -336,6 +364,7 @@ export async function runAlertsForMember(
         metadata: { alertId: alertRow.id, callSessionId: session.id },
         visibleToCaretaker: true,
       });
+      await emailSteward();
       stats.placed++;
       callsToday++;
     } catch (error) {

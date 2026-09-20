@@ -55,3 +55,10 @@ export const devProcedure = protectedProcedure.use(async ({ context, next }) => 
   if (!context.devToolsEnabled) throw new ORPCError("NOT_FOUND");
   return next();
 });
+
+// Same gate, but for demo procedures that run before anyone is signed in
+// (e.g. "simulate new user" on the sign-in page, which mints its own account).
+export const publicDevProcedure = publicProcedure.use(async ({ context, next }) => {
+  if (!context.devToolsEnabled) throw new ORPCError("NOT_FOUND");
+  return next();
+});

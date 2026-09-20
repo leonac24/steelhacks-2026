@@ -38,6 +38,8 @@ export const memberSettings = pgTable("member_settings", {
   reminderMode: reminderMode("reminder_mode").notNull().default("call"),
   // ElevenLabs TTS speed multiplier (1.0 = normal).
   voiceSpeed: real("voice_speed").notNull().default(0.9),
+  // Which assistant persona the member picked during onboarding.
+  assistantName: text("assistant_name").notNull().default("Jay"),
   notifyCaretakerOnUnanswered: boolean("notify_caretaker_on_unanswered").notNull().default(true),
   ...timestamps(),
 });
@@ -52,6 +54,10 @@ export const alertRule = pgTable(
     type: alertRuleType("type").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     thresholdCents: integer("threshold_cents"),
+    // Who gets told: the caretaker by email, the member by phone call. Set
+    // during onboarding, editable later from settings.
+    notifySteward: boolean("notify_steward").notNull().default(true),
+    notifyNester: boolean("notify_nester").notNull().default(true),
     ...timestamps(),
   },
   (t) => [uniqueIndex("alert_rule_member_type_idx").on(t.memberId, t.type)],

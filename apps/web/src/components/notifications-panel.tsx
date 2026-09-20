@@ -94,7 +94,7 @@ export function NotificationsPanel({ memberId }: { memberId: string }) {
           const meta = categoryMeta(w.category);
           return (
             <div key={w.category} className="flex items-start gap-3 py-3">
-              <TrendingUp className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              <TrendingUp className="mt-0.5 size-4 shrink-0 text-sky-500" />
               <p className="text-sm">
                 <span className="font-medium">{meta.label} budget: </span>
                 {w.alreadyExceeded ? (

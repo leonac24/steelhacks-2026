@@ -7,77 +7,139 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* NestEgg palette — sampled from the nest-with-eggs emoji, golden-egg
-     variant: white canvas, warm gold/amber as the one true accent, used
-     app-wide. Every text/bg pair below is verified against WCAG AA
-     (4.5:1 for normal text, checked by script). */
-  --background: #ffffff;
-  --foreground: #2a1f17;
+  /* NestEgg palette — blue/green pastel, drawn from the hero's dusk-mountain
+     scene (dusty sky blue up top, pine-forest green underneath). Bold enough
+     to hold contrast, no flashy saturation, no dark charcoal base. Every
+     text/bg pair below is verified against WCAG AA (4.5:1 normal text,
+     checked by script). */
+  --background: #f5faf8;
+  --foreground: #173a36;
   --card: #ffffff;
-  --card-foreground: #2a1f17;
+  --card-foreground: #173a36;
   --popover: #ffffff;
-  --popover-foreground: #2a1f17;
-  --primary: #b45309;
+  --popover-foreground: #173a36;
+  --primary: #1c6f6a;
   --primary-foreground: #ffffff;
-  --secondary: #f3e3c2;
-  --secondary-foreground: #4a3826;
-  --muted: #fdf8ee;
-  --muted-foreground: #8a7156;
-  --accent: #fef3c7;
-  --accent-foreground: #7c3d0a;
+  --secondary: #cdeee2;
+  --secondary-foreground: #1c4a42;
+  --muted: #eef8f4;
+  --muted-foreground: #4c6d67;
+  --accent: #bfe3ee;
+  --accent-foreground: #1a4a5c;
   --destructive: #c53328;
   --destructive-foreground: #ffffff;
-  --border: #f3e3c2;
-  --input: #f3e3c2;
-  --ring: color-mix(in oklch, #b45309 50%, transparent);
-  --chart-1: #d97706;
-  --chart-2: #b8a68c;
-  --chart-3: #4a7038;
-  --chart-4: #7a5233;
-  --chart-5: #c97b5a;
+  --border: #cdeee2;
+  --input: #cdeee2;
+  --ring: color-mix(in oklch, #1c6f6a 50%, transparent);
+  --chart-1: #1c6f6a;
+  --chart-2: #3a7ca5;
+  --chart-3: #6fb98f;
+  --chart-4: #2f5d8a;
+  --chart-5: #8fc9b9;
   --radius: 1.25rem;
-  --sidebar: #fffdf9;
-  --sidebar-foreground: #2a1f17;
-  --sidebar-primary: #b45309;
+  --sidebar: #fbfdfc;
+  --sidebar-foreground: #173a36;
+  --sidebar-primary: #1c6f6a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fef3c7;
-  --sidebar-accent-foreground: #7c3d0a;
-  --sidebar-border: #f3e3c2;
-  --sidebar-ring: color-mix(in oklch, #b45309 50%, transparent);
+  --sidebar-accent: #bfe3ee;
+  --sidebar-accent-foreground: #1a4a5c;
+  --sidebar-border: #cdeee2;
+  --sidebar-ring: color-mix(in oklch, #1c6f6a 50%, transparent);
+
+  /* Landing-page hero scene — dusk over blue/green mountains. Swapped for a
+     moonlit palette under .dark; see there for the night version. */
+  --hero-sky-0: #3f7a95;
+  --hero-sky-1: #5c93a3;
+  --hero-sky-2: #7ea69f;
+  --hero-sky-3: #8ec3a8;
+  --hero-sky-4: #a8d6ba;
+  --hero-sky-5: #c3e6c9;
+  --hero-glow-0: #cdf0d9;
+  --hero-glow-1: #bfe8d4;
+  --hero-ridge-1-top: #adb9c8;
+  --hero-ridge-1-bottom: #bcc2cb;
+  --hero-ridge-2-top: #97a7b9;
+  --hero-ridge-2-bottom: #a8b2bf;
+  --hero-ridge-3-top: #8b9cae;
+  --hero-ridge-3-bottom: #9aa7b4;
+  --hero-ridge-4-top: #6f8395;
+  --hero-ridge-4-bottom: #7d8c9a;
+  --hero-ridge-5-top: #526675;
+  --hero-ridge-5-bottom: #5d6b76;
+  --hero-ridge-6-top: #3a4a52;
+  --hero-ridge-6-bottom: #313f46;
+  --hero-ridge-7-top: #26322f;
+  --hero-ridge-7-bottom: #1b2422;
+  --hero-ridge-8-top: #141b19;
+  --hero-ridge-8-bottom: #0d1211;
+  --hero-haze-0: #c9e6d2;
+  --hero-haze-1: #cfe9d8;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Bluer, less green than the first pass — panels lean navy/slate-blue
+     instead of teal, accent shifted from mint toward cyan-blue. */
+  --background: #10222c;
+  --foreground: #e6f0f5;
+  --card: #16303d;
+  --card-foreground: #e6f0f5;
+  --popover: #16303d;
+  --popover-foreground: #e6f0f5;
+  --primary: #6fc0d0;
+  --primary-foreground: #0d2530;
+  --secondary: #1f3f4d;
+  --secondary-foreground: #cfe6f0;
+  --muted: #1a3540;
+  --muted-foreground: #9cb9c4;
+  --accent: #2a4f68;
+  --accent-foreground: #bfd8ee;
+  --destructive: #e05a4d;
+  --border: color-mix(in oklch, #6fc0d0 20%, transparent);
+  --input: color-mix(in oklch, #6fc0d0 24%, transparent);
+  --ring: color-mix(in oklch, #6fc0d0 55%, transparent);
+  --chart-1: #6fc0d0;
+  --chart-2: #6fa8d8;
+  --chart-3: #8fc9d6;
+  --chart-4: #5b8fc9;
+  --chart-5: #a8cfdd;
+  --sidebar: #10222c;
+  --sidebar-foreground: #e6f0f5;
+  --sidebar-primary: #6fc0d0;
+  --sidebar-primary-foreground: #0d2530;
+  --sidebar-accent: #2a4f68;
+  --sidebar-accent-foreground: #bfd8ee;
+  --sidebar-border: color-mix(in oklch, #6fc0d0 20%, transparent);
+  --sidebar-ring: color-mix(in oklch, #6fc0d0 55%, transparent);
+
+  /* Night version of the hero scene: same mountain layout, a moonlit
+     blue-navy sky instead of dusk, ridges darkened and cooled to match.
+     Kept deliberately conservative — desaturated, not blue-black flashy. */
+  --hero-sky-0: #0d1b2e;
+  --hero-sky-1: #16283d;
+  --hero-sky-2: #1f3347;
+  --hero-sky-3: #2c4054;
+  --hero-sky-4: #3a5468;
+  --hero-sky-5: #4a6b74;
+  --hero-glow-0: #dbe9f0;
+  --hero-glow-1: #b9d3de;
+  --hero-ridge-1-top: #2e4256;
+  --hero-ridge-1-bottom: #34495d;
+  --hero-ridge-2-top: #263a4c;
+  --hero-ridge-2-bottom: #2c4053;
+  --hero-ridge-3-top: #203243;
+  --hero-ridge-3-bottom: #26394a;
+  --hero-ridge-4-top: #1a2a38;
+  --hero-ridge-4-bottom: #1f3040;
+  --hero-ridge-5-top: #142330;
+  --hero-ridge-5-bottom: #182835;
+  --hero-ridge-6-top: #101c27;
+  --hero-ridge-6-bottom: #13202b;
+  --hero-ridge-7-top: #0b141c;
+  --hero-ridge-7-bottom: #0d1720;
+  --hero-ridge-8-top: #070d12;
+  --hero-ridge-8-bottom: #080f14;
+  --hero-haze-0: #4a6478;
+  --hero-haze-1: #4f6b7d;
 }
 
 @theme inline {

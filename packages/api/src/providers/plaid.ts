@@ -242,11 +242,23 @@ export async function injectSandboxTransaction(
   db: Database,
   input: { memberId: string; amountCents: number; merchantName: string; daysAgo?: number },
 ): Promise<SyncResult> {
-  const connection = await db.query.bankConnection.findFirst({
+  let connection = await db.query.bankConnection.findFirst({
     where: and(eq(bankConnection.memberId, input.memberId), eq(bankConnection.provider, "plaid")),
   });
+  // Demo convenience: rather than making the caretaker click a separate
+  // "connect sandbox bank" button first, mint one automatically the first
+  // time they try to simulate a transaction.
   if (!connection?.accessToken) {
-    throw new Error("No Plaid sandbox item for this member; call plaidCreateSandboxItem first");
+    await createSandboxPlaidItem(plaid, db, { memberId: input.memberId });
+    connection = await db.query.bankConnection.findFirst({
+      where: and(
+        eq(bankConnection.memberId, input.memberId),
+        eq(bankConnection.provider, "plaid"),
+      ),
+    });
+  }
+  if (!connection?.accessToken) {
+    throw new Error("Failed to provision a Plaid sandbox item for this member");
   }
 
   // Plaid Sandbox only allows the present date or up to 14 days in the past.

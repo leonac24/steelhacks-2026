@@ -5,6 +5,7 @@ import { Mic, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 
 import { HeroBackground } from "@/components/hero-background";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import UserMenu from "@/components/user-menu";
 import { orpc } from "@/utils/orpc";
 
@@ -23,7 +24,7 @@ function HomeComponent() {
   const healthCheck = useQuery(orpc.healthCheck.queryOptions());
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#3d2a3a]">
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-[#3f7a95] dark:bg-[#0d1b2e]">
       <HeroBackground />
 
       <header className="relative z-20 flex items-center justify-between px-6 py-5 sm:px-10">
@@ -31,7 +32,8 @@ function HomeComponent() {
           <Logo size={30} />
           <span className="text-base font-bold tracking-tight text-white">NestEgg</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <ThemeToggle className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white" />
           <UserMenu signInClassName="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white" />
         </div>
       </header>
@@ -44,15 +46,15 @@ function HomeComponent() {
           {healthCheck.isLoading
             ? "Checking status…"
             : healthCheck.data
-              ? "NestEgg is live"
+              ? "24/7 Phone + Web Availability"
               : "Reconnecting…"}
         </span>
 
-        <h1 className="font-display max-w-4xl text-5xl leading-[1.1] font-medium text-balance text-white sm:text-6xl lg:text-7xl">
-          The Nest is Empty. The Egg isn&apos;t.
+        <h1 className="font-display max-w-4xl text-5xl leading-[1.1] font-medium text-balance text-white [text-shadow:0_2px_18px_rgba(30,42,52,0.45)] sm:text-6xl lg:text-7xl">
+          The nest is empty. The egg shouldn&apos;t be.
         </h1>
 
-        <p className="mt-6 max-w-lg text-base text-white/70 sm:text-lg">
+        <p className="mt-6 max-w-lg text-base text-white/85 [text-shadow:0_1px_10px_rgba(30,42,52,0.4)] sm:text-lg">
           You moved out, but their money didn&apos;t move on. NestEgg helps you build a budget for
           your family, and checks in by voice, so nobody has to open an app or start a hard
           conversation.

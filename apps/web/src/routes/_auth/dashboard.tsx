@@ -133,7 +133,7 @@ function RouteComponent() {
                   </div>
                   <ProgressPrimitive.Root value={(c.totalCents / topSpend) * 100}>
                     <ProgressTrack>
-                      <ProgressIndicator className="bg-gradient-to-r from-amber-400 to-amber-600" />
+                      <ProgressIndicator className="bg-gradient-to-r from-teal-400 to-teal-600" />
                     </ProgressTrack>
                   </ProgressPrimitive.Root>
                 </div>
@@ -141,7 +141,7 @@ function RouteComponent() {
             })}
             <Link
               to="/budget"
-              className="bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-sm font-medium text-transparent hover:underline"
+              className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-sm font-medium text-transparent hover:underline"
             >
               View budget →
             </Link>
@@ -163,8 +163,8 @@ function RouteComponent() {
             return (
               <div key={t.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-amber-200">
-                    <meta.icon className="size-4 text-amber-800" />
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-100 to-teal-200">
+                    <meta.icon className="size-4 text-teal-800" />
                   </span>
                   <div>
                     <p className="text-sm font-medium">{t.merchantName ?? "Unknown"}</p>
@@ -179,7 +179,7 @@ function RouteComponent() {
           })}
           <Link
             to="/transactions"
-            className="bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text pt-2 text-sm font-medium text-transparent hover:underline"
+            className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text pt-2 text-sm font-medium text-transparent hover:underline"
           >
             View all transactions →
           </Link>
@@ -202,13 +202,13 @@ function StatCard({
     <Card
       className={cn(
         "relative overflow-hidden",
-        hero && "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white",
+        hero && "border-teal-200 bg-gradient-to-br from-teal-50 via-white to-white",
       )}
     >
       {hero && (
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-gradient-to-br from-amber-300/40 to-amber-500/0 blur-2xl"
+          className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-gradient-to-br from-teal-300/40 to-teal-500/0 blur-2xl"
         />
       )}
       <CardHeader className="pb-2">
@@ -222,7 +222,7 @@ function StatCard({
             className={cn(
               "text-2xl font-semibold tracking-tight",
               hero &&
-                "bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 bg-clip-text text-3xl text-transparent",
+                "bg-gradient-to-br from-teal-600 via-teal-500 to-sky-500 bg-clip-text text-3xl text-transparent",
             )}
           >
             {value}

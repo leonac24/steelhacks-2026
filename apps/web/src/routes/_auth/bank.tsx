@@ -30,15 +30,15 @@ import {
   TableRow,
 } from "@steelhacks-2026/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { FlaskConical, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { useActiveMember } from "@/hooks/use-active-member";
 import { categoryMeta, KNOWN_CATEGORIES } from "@/lib/categories";
-import { formatCents, formatSignedCents } from "@/lib/format";
+import { formatSignedCents } from "@/lib/format";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth/bank")({
@@ -57,9 +57,38 @@ type TransactionRow = {
 };
 
 function RouteComponent() {
-  const { activeMemberId, isLoading: membersLoading } = useActiveMember();
+  const { activeMember, activeMemberId, isLoading: membersLoading } = useActiveMember();
   const enabled = !!activeMemberId;
   const queryClient = useQueryClient();
+
+  const onDemoError = (error: Error) => toast.error(error.message);
+  const refreshAll = () => void queryClient.invalidateQueries({ queryKey: orpc.caretaker.key() });
+
+  const injectTransaction = useMutation({
+    ...orpc.dev.injectTransaction.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Transaction posted");
+      refreshAll();
+    },
+    onError: onDemoError,
+  });
+  const runAlerts = useMutation({
+    ...orpc.dev.runAlerts.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Alerts evaluated");
+      refreshAll();
+    },
+    onError: onDemoError,
+  });
+  const processApprovals = useMutation({
+    ...orpc.dev.processApprovals.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(`${result.applied} applied, ${result.expired} expired`);
+      refreshAll();
+    },
+    onError: onDemoError,
+  });
+  const demoBusy = injectTransaction.isPending || runAlerts.isPending || processApprovals.isPending;
 
   const accounts = useQuery(
     orpc.caretaker.bank.accounts.list.queryOptions({
@@ -67,6 +96,8 @@ function RouteComponent() {
       enabled,
     }),
   );
+  // Only needed here to pick a default account for new transactions — the
+  // account cards themselves live on /accounts now.
   const txns = useQuery(
     orpc.caretaker.transactions.list.queryOptions({
       input: { memberId: activeMemberId!, limit: 100 },
@@ -81,9 +112,6 @@ function RouteComponent() {
     void queryClient.invalidateQueries();
   }
 
-  const updateAccount = useMutation(
-    orpc.caretaker.bank.accounts.update.mutationOptions({ onSuccess: invalidateAll }),
-  );
   const createTxn = useMutation(
     orpc.caretaker.bank.transactions.create.mutationOptions({
       onSuccess: () => {
@@ -108,38 +136,82 @@ function RouteComponent() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Bank data</h1>
-        <p className="text-muted-foreground text-sm">
-          Admin tool for editing the seeded mock bank data used by this demo.
-        </p>
+      <div className="flex items-start justify-between gap-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <FlaskConical className="size-4 text-primary" />
+            <h1 className="text-2xl font-semibold tracking-tight">Bank simulator</h1>
+          </div>
+          <p className="text-muted-foreground mt-1 text-sm">
+            This page is a demo-only tool for simulating what happens to{" "}
+            {activeMember?.preferredName ?? "this nester"}&apos;s mock bank data. Nothing here
+            talks to a real bank. Post transactions by hand below, or fire one of the scripted
+            demo beats to show the caretaker/nester story live.
+          </p>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Accounts</CardTitle>
+          <CardTitle>Live demo beats</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col divide-y">
-          {accounts.isLoading && <Skeleton className="h-16 w-full" />}
-          {accounts.data?.map((a) => (
-            <div key={a.id} className="flex items-center justify-between gap-3 py-3">
-              <div>
-                <p className="font-medium">
-                  {a.name} {a.mask ? `••${a.mask}` : ""}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {formatCents(a.currentBalanceCents)} current ·{" "}
-                  {formatCents(a.availableBalanceCents)} available
-                </p>
-              </div>
-              <AccountDialog
-                account={a}
-                onSave={(changes) =>
-                  updateAccount.mutate({ memberId: activeMemberId!, id: a.id, ...changes })
-                }
-              />
-            </div>
-          ))}
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-muted-foreground text-sm">
+            Each button stands in for something that normally happens on its own — a bank
+            webhook, a phone call, a nightly cron run. Keep{" "}
+            <Link to="/dashboard" className="underline underline-offset-4">
+              the dashboard
+            </Link>{" "}
+            open in another tab to watch it update.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={demoBusy || !activeMemberId}
+              onClick={() =>
+                injectTransaction.mutate({
+                  memberId: activeMemberId!,
+                  amountCents: 40_000,
+                  merchantName: "QuikCash Gift Cards",
+                  category: "other",
+                })
+              }
+            >
+              Post $400 unusual charge
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={demoBusy || !activeMemberId}
+              onClick={() =>
+                injectTransaction.mutate({
+                  memberId: activeMemberId!,
+                  amountCents: -184_200,
+                  merchantName: "Social Security Administration",
+                  category: "income",
+                })
+              }
+            >
+              Deposit $1,842
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={demoBusy || !activeMemberId}
+              onClick={() => runAlerts.mutate({ memberId: activeMemberId! })}
+            >
+              Run alerts
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={demoBusy}
+              onClick={() => processApprovals.mutate({})}
+            >
+              Process approvals (a day passes)
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -230,92 +302,6 @@ function RouteComponent() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function AccountDialog({
-  account,
-  onSave,
-}: {
-  account: {
-    name: string;
-    mask: string | null;
-    currentBalanceCents: number;
-    availableBalanceCents: number;
-  };
-  onSave: (changes: {
-    name: string;
-    mask: string | null;
-    currentBalanceCents: number;
-    availableBalanceCents: number;
-  }) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState(account.name);
-  const [mask, setMask] = useState(account.mask ?? "");
-  const [current, setCurrent] = useState(String(account.currentBalanceCents / 100));
-  const [available, setAvailable] = useState(String(account.availableBalanceCents / 100));
-
-  function submit() {
-    onSave({
-      name,
-      mask: mask || null,
-      currentBalanceCents: Math.round(Number(current) * 100),
-      availableBalanceCents: Math.round(Number(available) * 100),
-    });
-    setOpen(false);
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>Edit</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit account</DialogTitle>
-          <DialogDescription>Overrides the seeded balance for the mock provider.</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="account-name">Name</Label>
-            <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="account-mask">Last 4 digits</Label>
-            <Input
-              id="account-mask"
-              maxLength={4}
-              value={mask}
-              onChange={(e) => setMask(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="account-current">Current balance</Label>
-              <Input
-                id="account-current"
-                type="number"
-                step="0.01"
-                value={current}
-                onChange={(e) => setCurrent(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="account-available">Available balance</Label>
-              <Input
-                id="account-available"
-                type="number"
-                step="0.01"
-                value={available}
-                onChange={(e) => setAvailable(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={submit}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
