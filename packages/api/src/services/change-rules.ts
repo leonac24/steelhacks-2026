@@ -84,6 +84,7 @@ const ALERT_LABELS: Record<AlertRuleType, string> = {
   bill_due_unfunded: "calls when a bill is due without enough money",
   unusual_txn: "calls about unusual charges",
   deposit_arrived: "calls when a deposit arrives",
+  briefing: "the financial weather briefing",
 };
 
 const REMINDER_LABELS = {

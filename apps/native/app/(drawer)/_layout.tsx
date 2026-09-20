@@ -65,7 +65,7 @@ function DrawerLayout() {
           ),
         }}
       />
-    <Drawer.Screen
+      <Drawer.Screen
         name="todos"
         options={{
           headerTitle: "Todos",

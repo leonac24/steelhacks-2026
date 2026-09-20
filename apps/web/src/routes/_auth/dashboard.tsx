@@ -171,7 +171,9 @@ function RouteComponent() {
                     <p className="text-muted-foreground text-xs">{formatIsoDate(t.date)}</p>
                   </div>
                 </div>
-                <span className={t.amountCents < 0 ? "font-medium text-emerald-600" : "font-medium"}>
+                <span
+                  className={t.amountCents < 0 ? "font-medium text-emerald-600" : "font-medium"}
+                >
                   {formatSignedCents(t.amountCents)}
                 </span>
               </div>

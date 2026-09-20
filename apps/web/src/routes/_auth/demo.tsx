@@ -63,6 +63,19 @@ function DemoRoute() {
     onError,
   });
 
+  const runBriefing = useMutation({
+    ...orpc.dev.runBriefing.mutationOptions(),
+    onSuccess: (result) => {
+      toast.success(
+        result.placed
+          ? "June called with the weather briefing"
+          : `Not delivered — ${result.skipped?.reason ?? "unknown"}`,
+      );
+      refresh();
+    },
+    onError,
+  });
+
   if (!memberId) {
     return <p className="p-6 text-muted-foreground">No members linked to this account.</p>;
   }
@@ -71,7 +84,8 @@ function DemoRoute() {
     injectTransaction.isPending ||
     simulateVoiceChange.isPending ||
     runAlerts.isPending ||
-    processApprovals.isPending;
+    processApprovals.isPending ||
+    runBriefing.isPending;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
@@ -165,6 +179,16 @@ function DemoRoute() {
         action="Process approvals"
         disabled={busy}
         onClick={() => processApprovals.mutate({})}
+      />
+
+      <Step
+        n={7}
+        title="The financial weather call"
+        description="June calls Dot with the morning briefing — on track this month, groceries ran a little high, the Social Security deposit lands Thursday. Passive and scheduled, not on-demand: it's due on a weekly clock, and Dot never has to ask."
+        action="Deliver the briefing"
+        disabled={busy}
+        onClick={() => runBriefing.mutate({ memberId })}
+        note="Frequency is per-member under Notifications → Financial weather briefing."
       />
     </div>
   );

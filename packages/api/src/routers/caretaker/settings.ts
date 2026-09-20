@@ -5,6 +5,7 @@ import {
   alertRule,
   alertRuleType,
   approvalTimeout,
+  briefingFrequency,
   budget,
   memberSettings,
   permission,
@@ -45,6 +46,7 @@ const SETTING_LABELS = {
   quietHoursEnd: "quiet hours",
   maxCallsPerDay: "calls per day",
   reminderMode: "reminders",
+  briefingFrequency: "the weather briefing schedule",
   voiceSpeed: "voice speed",
   notifyCaretakerOnUnanswered: "missed-call notices",
 } as const;
@@ -69,6 +71,7 @@ export const settingsRouter = {
         quietHoursEnd: clockTime.optional(),
         maxCallsPerDay: z.number().int().min(0).max(10).optional(),
         reminderMode: z.enum(reminderMode.enumValues).optional(),
+        briefingFrequency: z.enum(briefingFrequency.enumValues).optional(),
         // ElevenLabs accepts roughly 0.7-1.2.
         voiceSpeed: z.number().min(0.7).max(1.2).optional(),
         notifyCaretakerOnUnanswered: z.boolean().optional(),

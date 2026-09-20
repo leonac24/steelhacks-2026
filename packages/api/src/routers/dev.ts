@@ -7,6 +7,7 @@ import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
 import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
+import * as financialWeather from "../services/financial-weather";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
 
 async function checkAfterNewTransactions(
@@ -118,4 +119,48 @@ export const devRouter = {
   processApprovals: devProcedure.handler(({ context }) =>
     changeRequests.processTimeouts(context.db),
   ),
+
+  // Stands in for "Dot proposes something to June on a call and June
+  // confirms with her". Proposes + immediately confirms, so the change goes
+  // live right away for instant-notify tiers, or lands in the caretaker's
+  // approval queue for needs-approval tiers.
+  simulateVoiceChange: devProcedure
+    .input(
+      z.object({
+        memberId: z.string(),
+        changeType: z.string().min(1),
+        payload: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      const proposed = await changeRequests.propose(context.db, {
+        memberId: input.memberId,
+        changeType: input.changeType as Parameters<typeof changeRequests.propose>[1]["changeType"],
+        payload: input.payload,
+        callSessionId: "demo",
+      });
+      const confirmed = await changeRequests.confirm(context.db, {
+        confirmationId: proposed.confirmationId,
+        callSessionId: "demo",
+      });
+      if (!confirmed.ok) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: `Voice change wasn't accepted (${confirmed.reason})`,
+        });
+      }
+      return { status: confirmed.status, summaryText: confirmed.summaryText };
+    }),
+
+  // Delivers the financial weather briefing immediately, "as if" the daily
+  // cron saw it was due — no waiting for the schedule.
+  runBriefing: devProcedure
+    .input(z.object({ memberId: z.string() }))
+    .use(requirePrimaryCaretaker)
+    .handler(({ input, context }) =>
+      financialWeather.dispatchBriefing(context.db, input.memberId, {
+        force: true,
+        elevenLabs: context.elevenLabs,
+      }),
+    ),
 };

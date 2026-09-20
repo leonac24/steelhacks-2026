@@ -150,11 +150,13 @@ export function checkDelivery(check: DeliveryCheck): DeliveryDecision {
 }
 
 // Most urgent first, so a single allowed call is the one that matters most.
+// The scheduled briefing is the gentlest thing we say, so it ranks last.
 const PRIORITY: Record<AlertRuleType, number> = {
   bill_due_unfunded: 0,
   unusual_txn: 1,
   shortfall: 2,
   deposit_arrived: 3,
+  briefing: 4,
 };
 
 export function byPriority(a: AlertCandidate, b: AlertCandidate): number {

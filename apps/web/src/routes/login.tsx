@@ -41,7 +41,9 @@ function RouteComponent() {
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Caretaker demo</CardTitle>
-            <p className="text-muted-foreground text-sm">Signs you in as Maria, Dot&apos;s caretaker.</p>
+            <p className="text-muted-foreground text-sm">
+              Signs you in as Maria, Dot&apos;s caretaker.
+            </p>
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={signIn} disabled={isSigningIn}>

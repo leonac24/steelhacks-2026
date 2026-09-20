@@ -3,29 +3,16 @@
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*"
-      ],
-      "outputs": [
-        "dist/**"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"]
     },
     "lint": {
-      "dependsOn": [
-        "^lint"
-      ]
+      "dependsOn": ["^lint"]
     },
     "check-types": {
-      "dependsOn": [
-        "^check-types"
-      ],
-      "outputs": [
-        "dist/**"
-      ]
+      "dependsOn": ["^check-types"],
+      "outputs": ["dist/**"]
     },
     "dev": {
       "cache": false,
@@ -48,9 +35,7 @@
       "persistent": true
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "outputs": []
     },
     "db:seed": {
@@ -89,9 +74,5 @@
     "VERCEL_URL",
     "_VARLOCK_ENV_KEY"
   ],
-  "globalDependencies": [
-    ".env*",
-    "apps/*/.env*",
-    "packages/*/.env*"
-  ]
+  "globalDependencies": [".env*", "apps/*/.env*", "packages/*/.env*"]
 }

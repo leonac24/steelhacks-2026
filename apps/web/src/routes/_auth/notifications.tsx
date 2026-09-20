@@ -1,6 +1,7 @@
 import { Skeleton } from "@steelhacks-2026/ui/components/skeleton";
 import { createFileRoute } from "@tanstack/react-router";
 
+import { FinancialWeatherPanel } from "@/components/financial-weather-panel";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { useActiveMember } from "@/hooks/use-active-member";
 
@@ -21,6 +22,7 @@ function RouteComponent() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+      <FinancialWeatherPanel memberId={activeMemberId} />
       <NotificationsPanel memberId={activeMemberId} />
     </div>
   );

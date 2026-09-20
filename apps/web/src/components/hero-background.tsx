@@ -94,7 +94,6 @@ function Leaf({
   );
 }
 
-
 const LEAVES = [
   { x: 260, y: 260, rotate: -20, scale: 1, color: "#c97b5a" },
   { x: 1620, y: 300, rotate: 30, scale: 0.9, color: "#e0a95f" },

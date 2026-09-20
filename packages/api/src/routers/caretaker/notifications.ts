@@ -6,6 +6,7 @@ import { and, desc, eq } from "drizzle-orm";
 import z from "zod";
 
 import { protectedProcedure, requireCaretaker, requirePrimaryCaretaker } from "../../index";
+import * as financialWeather from "../../services/financial-weather";
 import { budgetWarnings, runBudgetCheck, runFraudCheck } from "../../services/notifications";
 
 const memberInput = z.object({ memberId: z.string() });
@@ -59,4 +60,11 @@ export const notificationsRouter = {
     .input(memberInput)
     .use(requirePrimaryCaretaker)
     .handler(({ input, context }) => runOrThrow(() => runBudgetCheck(context.db, input.memberId))),
+
+  // What June would read on the next scheduled weather briefing, plus the
+  // frequency/is-it-due state that determines when that happens.
+  weather: protectedProcedure
+    .input(memberInput)
+    .use(requireCaretaker)
+    .handler(({ input, context }) => financialWeather.weatherForMember(context.db, input.memberId)),
 };

@@ -20,11 +20,14 @@ export const recurringFrequency = pgEnum("recurring_frequency", [
 
 export const reminderMode = pgEnum("reminder_mode", ["call", "sms", "off"]);
 
+export const briefingFrequency = pgEnum("briefing_frequency", ["daily", "weekly"]);
+
 export const alertRuleType = pgEnum("alert_rule_type", [
   "shortfall",
   "bill_due_unfunded",
   "unusual_txn",
   "deposit_arrived",
+  "briefing",
 ]);
 
 // What a member can ask June to change.
@@ -79,6 +82,7 @@ export const activityType = pgEnum("activity_type", [
   "change_rejected",
   "change_expired",
   "alert_sent",
+  "briefing_sent",
   "expense_logged",
   "bank_synced",
   "settings_updated",

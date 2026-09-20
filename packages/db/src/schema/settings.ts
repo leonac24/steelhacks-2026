@@ -1,9 +1,19 @@
-import { boolean, integer, pgTable, real, text, time, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  date,
+  integer,
+  pgTable,
+  real,
+  text,
+  time,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 import { id, timestamps } from "./columns";
 import {
   alertRuleType,
   approvalTimeout,
+  briefingFrequency,
   permissionChangeType,
   permissionTier,
   reminderMode,
@@ -36,6 +46,11 @@ export const memberSettings = pgTable("member_settings", {
   quietHoursEnd: time("quiet_hours_end").notNull().default("09:00"),
   maxCallsPerDay: integer("max_calls_per_day").notNull().default(2),
   reminderMode: reminderMode("reminder_mode").notNull().default("call"),
+  // How often the ambient "financial weather" briefing calls. Defaults to
+  // weekly; a nil lastBriefingDate is treated as due.
+  briefingFrequency: briefingFrequency("briefing_frequency").notNull().default("weekly"),
+  // ISO date of the last briefing actually delivered (or null if never).
+  lastBriefingDate: date("last_briefing_date", { mode: "string" }),
   // ElevenLabs TTS speed multiplier (1.0 = normal).
   voiceSpeed: real("voice_speed").notNull().default(0.9),
   notifyCaretakerOnUnanswered: boolean("notify_caretaker_on_unanswered").notNull().default(true),

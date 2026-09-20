@@ -6,3 +6,4 @@ export * from "./cash-flow";
 export * from "./dates";
 export * from "./speech";
 export * from "./unusual";
+export * from "./weather";

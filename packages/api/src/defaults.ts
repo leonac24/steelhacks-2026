@@ -32,10 +32,13 @@ export const DEFAULT_ALERT_RULES: NewAlertRule[] = [
 ];
 
 export const DEFAULT_BUDGETS: NewBudget[] = [
-  { category: "groceries", monthlyLimitCents: 25_000 },
-  { category: "dining", monthlyLimitCents: 6_000 },
+  { category: "housing", monthlyLimitCents: 95_000 },
+  { category: "groceries", monthlyLimitCents: 28_000 },
+  { category: "utilities", monthlyLimitCents: 14_000 },
+  { category: "phone", monthlyLimitCents: 7_000 },
   { category: "pharmacy", monthlyLimitCents: 6_000 },
-  { category: "other", monthlyLimitCents: 10_000 },
+  { category: "dining", monthlyLimitCents: 5_000 },
+  { category: "other", monthlyLimitCents: 5_000 },
 ];
 
 export const DEFAULT_SETTINGS: NewSettings = {
@@ -44,6 +47,7 @@ export const DEFAULT_SETTINGS: NewSettings = {
   quietHoursEnd: "09:00",
   maxCallsPerDay: 2,
   reminderMode: "call",
+  briefingFrequency: "weekly",
   voiceSpeed: 0.9,
   notifyCaretakerOnUnanswered: true,
 };
