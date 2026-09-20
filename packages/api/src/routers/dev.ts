@@ -6,6 +6,7 @@ import { z } from "zod";
 import { devProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
+import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
 
 export const devRouter = {
@@ -34,9 +35,8 @@ export const devRouter = {
     }),
 
   // Simulates a new bank transaction, e.g. a $400 gift-card charge. Plaid mode
-  // goes through the Sandbox API; mock mode inserts a row directly. Returns the
-  // SyncResult so a future alerts step (alerts.evaluate, another team's work)
-  // can consume `added` and trigger a call after the transaction lands.
+  // goes through the Sandbox API; mock mode inserts a row directly. Then runs
+  // the alerts engine over what landed, which is the "June calls you" moment.
   injectTransaction: devProcedure
     .input(
       z.object({
@@ -54,52 +54,32 @@ export const devRouter = {
     )
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      if (context.injectPlaidTransaction) {
-        return context.injectPlaidTransaction(input);
-      }
-      return injectMockTransaction(context.db, input);
+      const sync = context.injectPlaidTransaction
+        ? await context.injectPlaidTransaction(input)
+        : await injectMockTransaction(context.db, input);
+      // The charge is in; now see if it's worth a call.
+      const dispatched = await alerts.dispatch(context.db, input.memberId, {
+        newTransactions: sync.added,
+        elevenLabs: context.elevenLabs,
+      });
+      return { ...sync, ...dispatched };
     }),
 
+  // Syncs the bank, then calls about anything worth calling about.
   runAlerts: devProcedure
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
-    .handler(async (): Promise<{ placed: number }> => {
-      // TODO(milestone 9): alerts.evaluate + outboundCalls.place.
-      throw new ORPCError("NOT_IMPLEMENTED", { message: "Alerts engine isn't built yet" });
+    .handler(async ({ input, context }) => {
+      const provider = createBankProvider(context.db, context.bankProvider);
+      const sync = await provider.syncTransactions(input.memberId);
+      return alerts.dispatch(context.db, input.memberId, {
+        newTransactions: sync.added,
+        elevenLabs: context.elevenLabs,
+      });
     }),
 
   // Settles every overdue approval now instead of waiting for cron.
   processApprovals: devProcedure.handler(({ context }) =>
     changeRequests.processTimeouts(context.db),
   ),
-
-  // Stands in for a phone call: proposes a change and immediately confirms it,
-  // exactly as /api/tools/propose-change + /api/tools/confirm-change will once
-  // milestone 7 lands. Lets the demo fill the approvals queue without Twilio.
-  simulateVoiceChange: devProcedure
-    .input(
-      z.object({
-        memberId: z.string(),
-        changeType: z.enum(changeTypeEnum.enumValues),
-        payload: z.unknown(),
-      }),
-    )
-    .use(requirePrimaryCaretaker)
-    .handler(async ({ input, context }) => {
-      const proposed = await changeRequests.propose(context.db, {
-        memberId: input.memberId,
-        changeType: input.changeType,
-        payload: input.payload,
-        // No real call session; confirm below passes the same null so they match.
-        callSessionId: null,
-      });
-      const result = await changeRequests.confirm(context.db, {
-        confirmationId: proposed.confirmationId,
-        callSessionId: null,
-      });
-      if (!result.ok) {
-        throw new ORPCError("CONFLICT", { message: `Confirm failed: ${result.reason}` });
-      }
-      return { summaryText: proposed.summaryText, status: result.status };
-    }),
 };

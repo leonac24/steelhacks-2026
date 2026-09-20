@@ -82,6 +82,8 @@ export const activityType = pgEnum("activity_type", [
   "expense_logged",
   "bank_synced",
   "settings_updated",
+  "fraud_suspected",
+  "budget_exceeded_warning",
 ]);
 
 export const alertChannel = pgEnum("alert_channel", ["call", "sms"]);

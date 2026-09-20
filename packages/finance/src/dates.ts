@@ -23,6 +23,16 @@ export function todayInTimezone(timezone: string, now: Date = new Date()): IsoDa
   return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
 }
 
+// The local wall-clock time in `timezone` as "HH:MM" (24-hour).
+export function localTimeInTimezone(timezone: string, now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
+}
+
 // Next date strictly after `from` that falls on `dayOfMonth`, clamped to the
 // month's last day (a bill "on the 31st" lands on Sep 30).
 export function nextDayOfMonth(from: IsoDate, dayOfMonth: number): IsoDate {
