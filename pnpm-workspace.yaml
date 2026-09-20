@@ -23,3 +23,21 @@ catalog:
   "@types/react-dom": ^19.2.7
   "@better-auth/expo": 1.7.5
   drizzle-orm: ^0.45.2
+minimumReleaseAgeExclude:
+  - '@orpc/contract@1.15.2'
+  - '@orpc/client@1.15.2'
+  - '@orpc/interop@1.15.2'
+  - '@orpc/json-schema@1.15.2'
+  - '@orpc/openapi-client@1.15.2'
+  - '@orpc/openapi@1.15.2'
+  - '@orpc/server@1.15.2'
+  - '@orpc/shared@1.15.2'
+  - '@orpc/standard-server-aws-lambda@1.15.2'
+  - '@orpc/standard-server-fastify@1.15.2'
+  - '@orpc/standard-server-fetch@1.15.2'
+  - '@orpc/standard-server-node@1.15.2'
+  - '@orpc/standard-server-peer@1.15.2'
+  - '@orpc/standard-server@1.15.2'
+  - '@orpc/tanstack-query@1.15.2'
+  - '@orpc/zod@1.15.2'
+  - 'copy-anything@4.1.1'
