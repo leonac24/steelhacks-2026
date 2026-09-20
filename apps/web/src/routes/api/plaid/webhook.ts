@@ -1,9 +1,12 @@
 import * as activity from "@steelhacks-2026/api/services/activity";
+import * as alerts from "@steelhacks-2026/api/services/alerts";
+import { runBudgetCheck, runFraudCheck } from "@steelhacks-2026/api/services/notifications";
 import { bankConnection } from "@steelhacks-2026/db/schema/index";
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { elevenLabsConfig } from "../../../lib/elevenlabs";
 import { bankProvider, db } from "../../../services";
 
 // https://plaid.com/docs/api/webhooks/webhook-verification/
@@ -43,8 +46,29 @@ export const Route = createFileRoute("/api/plaid/webhook")({
                 removed: result.removed,
               },
             });
-            // TODO(alerts service): alerts.evaluate(connection.memberId) once it exists,
-            // so a new transaction can trigger a shortfall/unusual-txn call.
+            // Three independent notification channels off the same new
+            // transactions. Awaited (not fire-and-forget) so they actually
+            // finish on serverless, but none of them can fail the webhook
+            // ack Plaid is waiting on.
+            if (result.added.length > 0) {
+              const [dispatched, fraud, budgets] = await Promise.allSettled([
+                alerts.dispatch(db, connection.memberId, {
+                  newTransactions: result.added,
+                  elevenLabs: elevenLabsConfig(),
+                }),
+                runFraudCheck(db, connection.memberId),
+                runBudgetCheck(db, connection.memberId),
+              ]);
+              if (dispatched.status === "rejected") {
+                console.error("plaid webhook: alerts dispatch failed", dispatched.reason);
+              }
+              if (fraud.status === "rejected") {
+                console.error("plaid webhook: fraud check failed", fraud.reason);
+              }
+              if (budgets.status === "rejected") {
+                console.error("plaid webhook: budget check failed", budgets.reason);
+              }
+            }
           }
         }
 

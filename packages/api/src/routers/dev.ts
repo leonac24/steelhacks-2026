@@ -7,6 +7,23 @@ import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
 import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
+import { runBudgetCheck, runFraudCheck } from "../services/notifications";
+
+async function checkAfterNewTransactions(
+  db: Parameters<typeof runFraudCheck>[0],
+  memberId: string,
+  addedCount: number,
+  source: string,
+) {
+  if (addedCount === 0) return;
+  const [fraud, budgets] = await Promise.allSettled([
+    runFraudCheck(db, memberId),
+    runBudgetCheck(db, memberId),
+  ]);
+  if (fraud.status === "rejected") console.error(`${source}: fraud check failed`, fraud.reason);
+  if (budgets.status === "rejected")
+    console.error(`${source}: budget check failed`, budgets.reason);
+}
 
 export const devRouter = {
   // Mints a Plaid Sandbox item for a member so the demo has real data to
@@ -30,7 +47,16 @@ export const devRouter = {
     .input(z.object({ memberId: z.string() }))
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      return createBankProvider(context.db, context.bankProvider).syncTransactions(input.memberId);
+      const result = await createBankProvider(context.db, context.bankProvider).syncTransactions(
+        input.memberId,
+      );
+      await checkAfterNewTransactions(
+        context.db,
+        input.memberId,
+        result.added.length,
+        "dev.plaidSyncNow",
+      );
+      return result;
     }),
 
   // Simulates a new bank transaction, e.g. a $400 gift-card charge. Plaid mode
@@ -56,11 +82,22 @@ export const devRouter = {
       const sync = context.injectPlaidTransaction
         ? await context.injectPlaidTransaction(input)
         : await injectMockTransaction(context.db, input);
-      // The charge is in; now see if it's worth a call.
-      const dispatched = await alerts.dispatch(context.db, input.memberId, {
-        newTransactions: sync.added,
-        elevenLabs: context.elevenLabs,
-      });
+
+      // Two independent notification channels off the same new transactions:
+      // the rule-based alerts engine (may place a voice call), and Gemini
+      // fraud + budget-pace checks (land on the caretaker's dashboard/email).
+      const [dispatched] = await Promise.all([
+        alerts.dispatch(context.db, input.memberId, {
+          newTransactions: sync.added,
+          elevenLabs: context.elevenLabs,
+        }),
+        checkAfterNewTransactions(
+          context.db,
+          input.memberId,
+          sync.added.length,
+          "dev.injectTransaction",
+        ),
+      ]);
       return { ...sync, ...dispatched };
     }),
 
