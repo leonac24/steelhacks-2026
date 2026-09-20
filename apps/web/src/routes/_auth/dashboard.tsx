@@ -68,7 +68,7 @@ function RouteComponent() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">
-        Welcome back{activeMember ? `, ${activeMember.preferredName}'s dashboard` : ""}
+        {activeMember ? `Welcome back — here's ${activeMember.preferredName}'s dashboard` : "Welcome back"}
       </h1>
 
       <NotificationsPanel memberId={activeMemberId!} />
@@ -163,8 +163,8 @@ function RouteComponent() {
             return (
               <div key={t.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-100 to-teal-200">
-                    <meta.icon className="size-4 text-teal-800" />
+                  <span className="bg-primary/15 flex size-8 items-center justify-center rounded-full">
+                    <meta.icon className="text-primary size-4" />
                   </span>
                   <div>
                     <p className="text-sm font-medium">{t.merchantName ?? "Unknown"}</p>
@@ -202,13 +202,13 @@ function StatCard({
     <Card
       className={cn(
         "relative overflow-hidden",
-        hero && "border-teal-200 bg-gradient-to-br from-teal-50 via-white to-white",
+        hero && "border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card",
       )}
     >
       {hero && (
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-gradient-to-br from-teal-300/40 to-teal-500/0 blur-2xl"
+          className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-gradient-to-br from-primary/30 to-primary/0 blur-2xl"
         />
       )}
       <CardHeader className="pb-2">
@@ -221,8 +221,7 @@ function StatCard({
           <p
             className={cn(
               "text-2xl font-semibold tracking-tight",
-              hero &&
-                "bg-gradient-to-br from-teal-600 via-teal-500 to-sky-500 bg-clip-text text-3xl text-transparent",
+              hero && "text-primary text-3xl",
             )}
           >
             {value}

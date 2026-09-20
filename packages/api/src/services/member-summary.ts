@@ -121,9 +121,14 @@ export async function memberSummary(
       .limit(5),
   ]);
 
-  // TODO: treat only checking accounts as spendable if members link savings too.
-  const availableBalanceCents = accounts.reduce((sum, a) => sum + a.availableBalanceCents, 0);
-  const currentBalanceCents = accounts.reduce((sum, a) => sum + a.currentBalanceCents, 0);
+  // Only checking is spendable day-to-day money. Summing every linked
+  // account (as this used to) meant a Plaid Sandbox money-market or CD
+  // balance — tens of thousands of dollars that isn't actually liquid —
+  // could blow up "safe to spend" into something wildly unrealistic, and a
+  // credit card's balance is debt, not cash, and should never add to it.
+  const spendable = accounts.filter((a) => a.type === "checking");
+  const availableBalanceCents = spendable.reduce((sum, a) => sum + a.availableBalanceCents, 0);
+  const currentBalanceCents = spendable.reduce((sum, a) => sum + a.currentBalanceCents, 0);
   const safetyBufferCents = settings?.safetyBufferCents ?? 0;
   const today = todayInTimezone(m.timezone, now);
   const picture = computeCashPicture({ today, availableBalanceCents, safetyBufferCents, streams });

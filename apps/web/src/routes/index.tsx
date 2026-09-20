@@ -55,7 +55,7 @@ function HomeComponent() {
         </h1>
 
         <p className="mt-6 max-w-lg text-base text-white/85 [text-shadow:0_1px_10px_rgba(30,42,52,0.4)] sm:text-lg">
-          You moved out, but their money didn&apos;t move on. NestEgg helps you build a budget for
+          You moved out, but their financial literacy won&apos;t move on. NestEgg helps you build a budget for
           your family, and checks in by voice, so nobody has to open an app or start a hard
           conversation.
         </p>
