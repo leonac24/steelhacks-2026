@@ -21,7 +21,6 @@ import {
   member,
   memberSettings,
   permission,
-  trustedContact,
   user,
 } from "@steelhacks-2026/db/schema/index";
 import { todayInTimezone } from "@steelhacks-2026/finance";
@@ -49,9 +48,7 @@ async function createUser(name: string, email: string) {
 async function main() {
   const resolvedPhone = process.env.DEMO_MEMBER_PHONE?.trim() || DOT_PHONE_FALLBACK;
   if (!/^\+\d{8,15}$/.test(resolvedPhone)) {
-    throw new Error(
-      `DEMO_MEMBER_PHONE must be E.164 (e.g. +14125550142), got "${resolvedPhone}"`,
-    );
+    throw new Error(`DEMO_MEMBER_PHONE must be E.164 (e.g. +14125550142), got "${resolvedPhone}"`);
   }
   DOROTHY.phone = resolvedPhone;
 
@@ -59,9 +56,7 @@ async function main() {
   console.log(`Seeding demo data for ${today}...`);
 
   // Clean slate. Member rows cascade to everything they own.
-  await db
-    .delete(member)
-    .where(inArray(member.phoneE164, [resolvedPhone, DOT_PHONE_FALLBACK]));
+  await db.delete(member).where(inArray(member.phoneE164, [resolvedPhone, DOT_PHONE_FALLBACK]));
   await db.delete(user).where(inArray(user.email, [MARIA.email, DOROTHY.email]));
 
   const maria = await createUser(MARIA.name, MARIA.email);
@@ -86,12 +81,6 @@ async function main() {
     memberId,
     role: "primary",
     memberConsentedAt: new Date(),
-  });
-  await db.insert(trustedContact).values({
-    memberId,
-    name: "Maria",
-    phoneE164: MARIA.phone,
-    relationship: "daughter",
   });
   await db.insert(memberSettings).values({ memberId, ...DEFAULT_SETTINGS });
   await db.insert(budget).values(DEFAULT_BUDGETS.map((b) => ({ memberId, ...b })));

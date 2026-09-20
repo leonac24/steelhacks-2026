@@ -5,8 +5,9 @@
 // item is ready (syncTransactions pages through `has_more` on its own).
 // In mock mode (no Plaid creds configured) it just creates a starter account
 // directly, since there's no sandbox to connect to.
-import { bankAccount, bankConnection } from "@steelhacks-2026/db/schema/index";
-import { eq } from "drizzle-orm";
+import { bankAccount, bankConnection, member, recurringStream } from "@steelhacks-2026/db/schema/index";
+import { addDays, todayInTimezone } from "@steelhacks-2026/finance";
+import { and, eq } from "drizzle-orm";
 
 import type { Context } from "../context";
 
@@ -16,13 +17,42 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Plaid's own recurring-transaction detection (transactionsRecurringGet)
+// needs history it doesn't have right after a Sandbox item is created, so
+// the "money coming in" box would sit empty until it eventually catches up
+// — if it ever does, since Sandbox data doesn't really repeat like a real
+// paycheck. Seed one deterministic income stream instead, so that box has
+// something to show right away regardless of provider.
+async function seedRecurringIncome(
+  db: Context["db"],
+  memberId: string,
+  timezone: string,
+): Promise<void> {
+  const existing = await db.query.recurringStream.findFirst({
+    where: and(eq(recurringStream.memberId, memberId), eq(recurringStream.kind, "income")),
+  });
+  if (existing) return;
+
+  const today = todayInTimezone(timezone);
+  await db.insert(recurringStream).values({
+    memberId,
+    kind: "income",
+    name: "Direct Deposit — Paycheck",
+    averageAmountCents: 218_000,
+    frequency: "biweekly",
+    nextExpectedDate: addDays(today, 7),
+  });
+}
+
 export async function connectDemoBank(
   context: Pick<Context, "db" | "bankProvider" | "bankProviderInstance" | "createSandboxPlaidItem">,
   memberId: string,
 ): Promise<ConnectDemoBankResult> {
-  const existing = await context.db.query.bankConnection.findFirst({
-    where: eq(bankConnection.memberId, memberId),
-  });
+  const [existing, m] = await Promise.all([
+    context.db.query.bankConnection.findFirst({ where: eq(bankConnection.memberId, memberId) }),
+    context.db.query.member.findFirst({ where: eq(member.id, memberId) }),
+  ]);
+  const timezone = m?.timezone ?? "America/New_York";
 
   if (context.bankProvider === "plaid") {
     if (!existing) {
@@ -43,10 +73,14 @@ export async function connectDemoBank(
       await sleep(1000);
       sync = await context.bankProviderInstance.syncTransactions(memberId);
     }
+    await seedRecurringIncome(context.db, memberId, timezone);
     return { alreadyConnected: !!existing, transactionsAdded: sync.added.length };
   }
 
-  if (existing) return { alreadyConnected: true, transactionsAdded: 0 };
+  if (existing) {
+    await seedRecurringIncome(context.db, memberId, timezone);
+    return { alreadyConnected: true, transactionsAdded: 0 };
+  }
 
   const [connection] = await context.db
     .insert(bankConnection)
@@ -63,5 +97,6 @@ export async function connectDemoBank(
     currentBalanceCents: 150_000,
     availableBalanceCents: 150_000,
   });
+  await seedRecurringIncome(context.db, memberId, timezone);
   return { alreadyConnected: false, transactionsAdded: 0 };
 }

@@ -1,67 +1,41 @@
-// Structured (skippable) onboarding for a freshly created steward: pick a
-// starter bank account, pick an assistant voice, and set alert preferences.
-// Every step, and the flow as a whole, can be skipped straight to the
-// dashboard — none of this is required to use the app.
+// Structured (skippable) onboarding for a freshly created steward: set the
+// voice-line PIN, pick a starter bank account, pick an assistant voice, and
+// set alert preferences. Every step, and the flow as a whole, can be
+// skipped straight to the dashboard — none of this is required to use the
+// app.
 import { Button } from "@steelhacks-2026/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@steelhacks-2026/ui/components/card";
 import { Checkbox } from "@steelhacks-2026/ui/components/checkbox";
+import { Input } from "@steelhacks-2026/ui/components/input";
+import { Label } from "@steelhacks-2026/ui/components/label";
 import { Skeleton } from "@steelhacks-2026/ui/components/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@steelhacks-2026/ui/components/tooltip";
 import { cn } from "@steelhacks-2026/ui/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Landmark, Sparkles, Volume2 } from "lucide-react";
+import { KeyRound, Landmark, Sparkles, Volume2 } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useActiveMember } from "@/hooks/use-active-member";
+import {
+  ALERT_ROWS,
+  ASSISTANTS,
+  DEFAULT_RECIPIENTS,
+  type AlertType,
+  type AssistantId,
+  type Recipients,
+} from "@/lib/assistant";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth/onboarding")({
   component: RouteComponent,
 });
 
-const STEPS = ["Bank account", "Assistant", "Alerts"] as const;
+const STEPS = ["Phone PIN", "Bank account", "Assistant", "Alerts"] as const;
 
 const DEMO_INSTITUTION = "Demo Bank";
 const REAL_LOOKING_INSTITUTIONS = ["Chase", "Capital One", "Wells Fargo", "Bank of America"];
-
-type AssistantId = "Jay" | "Robin";
-const ASSISTANTS: { id: AssistantId; emoji: string; blurb: string; sound: string }[] = [
-  {
-    id: "Robin",
-    emoji: "🐦‍🔥",
-    blurb: "Warm and a little slower.",
-    sound: "/sounds/robin.wav",
-  },
-  { id: "Jay", emoji: "🐦", blurb: "Bright and to the point.", sound: "/sounds/jay.wav" },
-];
-
-type AlertType = "budget_reached" | "unusual_txn" | "deposit_arrived";
-const ALERT_ROWS: { type: AlertType; label: string; description: string }[] = [
-  {
-    type: "budget_reached",
-    label: "Budget reached",
-    description: "A category budget is over, or on pace to go over.",
-  },
-  {
-    type: "unusual_txn",
-    label: "Potential fraud",
-    description: "A charge that doesn't look like the usual pattern.",
-  },
-  {
-    type: "deposit_arrived",
-    label: "New significant deposit",
-    description: "A deposit large enough to be worth flagging.",
-  },
-];
-
-type Recipients = Record<AlertType, { steward: boolean; nester: boolean }>;
-const DEFAULT_RECIPIENTS: Recipients = {
-  budget_reached: { steward: true, nester: false },
-  unusual_txn: { steward: true, nester: true },
-  deposit_arrived: { steward: true, nester: true },
-};
 
 function RouteComponent() {
   const navigate = useNavigate();
@@ -98,32 +72,90 @@ function RouteComponent() {
         {STEPS.map((label, i) => (
           <div
             key={label}
-            className={cn(
-              "h-1.5 flex-1 rounded-full",
-              i <= step ? "bg-primary" : "bg-muted",
-            )}
+            className={cn("h-1.5 flex-1 rounded-full", i <= step ? "bg-primary" : "bg-muted")}
           />
         ))}
       </div>
 
       {step === 0 && (
-        <BankStep
-          memberId={activeMemberId}
-          onNext={() => setStep(1)}
-          onSkip={() => setStep(1)}
-        />
+        <PinStep memberId={activeMemberId} onNext={() => setStep(1)} onSkip={() => setStep(1)} />
       )}
       {step === 1 && (
-        <AssistantStep
-          memberId={activeMemberId}
-          onNext={() => setStep(2)}
-          onSkip={() => setStep(2)}
-        />
+        <BankStep memberId={activeMemberId} onNext={() => setStep(2)} onSkip={() => setStep(2)} />
       )}
       {step === 2 && (
-        <AlertsStep memberId={activeMemberId} onFinish={finish} onSkip={finish} />
+        <AssistantStep
+          memberId={activeMemberId}
+          onNext={() => setStep(3)}
+          onSkip={() => setStep(3)}
+        />
       )}
+      {step === 3 && <AlertsStep memberId={activeMemberId} onFinish={finish} onSkip={finish} />}
     </div>
+  );
+}
+
+function PinStep({
+  memberId,
+  onNext,
+  onSkip,
+}: {
+  memberId: string;
+  onNext: () => void;
+  onSkip: () => void;
+}) {
+  const [pin, setPin] = useState("");
+  const setPinMutation = useMutation(
+    orpc.caretaker.members.setPin.mutationOptions({
+      onSuccess: () => {
+        toast.success("PIN set");
+        onNext();
+      },
+      onError: (error) => toast.error(error.message),
+    }),
+  );
+  const isValid = /^\d{4}$/.test(pin);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Set the phone PIN</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-muted-foreground text-sm">
+          Your assistant asks for this 4-digit PIN over the phone before discussing anything — it's
+          how it confirms it's really talking to your nester. Pick something they'll remember, or
+          skip this and a random one gets set instead.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="onboarding-pin">4-digit PIN</Label>
+          <div className="relative">
+            <KeyRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              id="onboarding-pin"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="1234"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className="h-11 pl-9 text-lg tracking-[0.5em]"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="ghost" onClick={onSkip}>
+            Skip this step
+          </Button>
+          <Button
+            disabled={!isValid || setPinMutation.isPending}
+            onClick={() => setPinMutation.mutate({ memberId, pin })}
+          >
+            {setPinMutation.isPending ? "Saving…" : "Continue"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -162,8 +194,8 @@ function BankStep({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-muted-foreground text-sm">
-          Demo Bank is the only one that actually connects — it backfills real Plaid Sandbox
-          history so there&apos;s something to look at right away.
+          Demo Bank is the only one that actually connects — it backfills real Plaid Sandbox history
+          so there&apos;s something to look at right away.
         </p>
         <div className="grid grid-cols-3 gap-3">
           {institutions.map((name) => {
@@ -192,7 +224,10 @@ function BankStep({
             Skip this step
           </Button>
           {isDemoSelected ? (
-            <Button disabled={connectDemo.isPending} onClick={() => connectDemo.mutate({ memberId })}>
+            <Button
+              disabled={connectDemo.isPending}
+              onClick={() => connectDemo.mutate({ memberId })}
+            >
               {connectDemo.isPending ? "Connecting…" : "Connect Demo Bank"}
             </Button>
           ) : (
@@ -245,7 +280,6 @@ function AssistantStep({
         <CardTitle>Choose your assistant</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-
         <div className="grid grid-cols-2 gap-3">
           {ASSISTANTS.map((assistant) => (
             <button
@@ -372,9 +406,12 @@ function AlertsStep({
 
           <div className="opacity-50">
             <p className="font-medium">
-              Once a week briefing <span className="text-muted-foreground text-xs">(coming soon)</span>
+              Once a week briefing{" "}
+              <span className="text-muted-foreground text-xs">(coming soon)</span>
             </p>
-            <p className="text-muted-foreground text-xs">A weekly summary instead of one-off calls.</p>
+            <p className="text-muted-foreground text-xs">
+              A weekly summary instead of one-off calls.
+            </p>
           </div>
           <Checkbox disabled />
           <Checkbox disabled />

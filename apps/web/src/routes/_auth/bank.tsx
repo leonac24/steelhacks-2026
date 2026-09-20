@@ -31,7 +31,7 @@ import {
 } from "@steelhacks-2026/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FlaskConical, Pencil, Plus, Trash2 } from "lucide-react";
+import { FlaskConical, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -88,7 +88,19 @@ function RouteComponent() {
     },
     onError: onDemoError,
   });
-  const demoBusy = injectTransaction.isPending || runAlerts.isPending || processApprovals.isPending;
+  const callMe = useMutation({
+    ...orpc.dev.callMe.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Calling now — pick up!");
+      refreshAll();
+    },
+    onError: onDemoError,
+  });
+  const demoBusy =
+    injectTransaction.isPending ||
+    runAlerts.isPending ||
+    processApprovals.isPending ||
+    callMe.isPending;
 
   const accounts = useQuery(
     orpc.caretaker.bank.accounts.list.queryOptions({
@@ -144,9 +156,9 @@ function RouteComponent() {
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
             This page is a demo-only tool for simulating what happens to{" "}
-            {activeMember?.preferredName ?? "this nester"}&apos;s mock bank data. Nothing here
-            talks to a real bank. Post transactions by hand below, or fire one of the scripted
-            demo beats to show the caretaker/nester story live.
+            {activeMember?.preferredName ?? "this nester"}&apos;s mock bank data. Nothing here talks
+            to a real bank. Post transactions by hand below, or fire one of the scripted demo beats
+            to show the caretaker/nester story live.
           </p>
         </div>
       </div>
@@ -157,8 +169,8 @@ function RouteComponent() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-muted-foreground text-sm">
-            Each button stands in for something that normally happens on its own — a bank
-            webhook, a phone call, a nightly cron run. Keep{" "}
+            Each button stands in for something that normally happens on its own — a bank webhook, a
+            phone call, a nightly cron run. Keep{" "}
             <Link to="/dashboard" className="underline underline-offset-4">
               the dashboard
             </Link>{" "}
@@ -211,7 +223,20 @@ function RouteComponent() {
             >
               Process approvals (a day passes)
             </Button>
+            <Button
+              size="sm"
+              disabled={demoBusy || !activeMemberId}
+              onClick={() => callMe.mutate({ memberId: activeMemberId! })}
+            >
+              <Phone className="size-4" />
+              {callMe.isPending ? "Calling…" : "Call me"}
+            </Button>
           </div>
+          <p className="text-muted-foreground text-xs">
+            "Call me" places a real outbound call through ElevenLabs to{" "}
+            {activeMember?.preferredName ?? "this nester"}&apos;s own phone number — needs
+            ELEVENLABS_API_KEY/ELEVENLABS_AGENT_ID/ELEVENLABS_PHONE_NUMBER_ID configured.
+          </p>
         </CardContent>
       </Card>
 

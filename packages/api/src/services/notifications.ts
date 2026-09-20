@@ -130,7 +130,11 @@ export async function runFraudCheck(db: Database, memberId: string): Promise<Che
       memberId,
       type: "fraud_suspected",
       summaryText: `Possible fraud: ${txn.merchantName ?? "unknown merchant"} ($${(txn.amountCents / 100).toFixed(2)}) — ${finding.reason}`,
-      metadata: { transactionId: finding.transactionId, confidence: finding.confidence },
+      metadata: {
+        transactionId: finding.transactionId,
+        confidence: finding.confidence,
+        severity: finding.severity,
+      },
     });
   }
 

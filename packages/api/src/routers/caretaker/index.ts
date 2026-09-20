@@ -4,13 +4,7 @@ import { insightsRouter } from "./insights";
 import { activityRouter, membersRouter } from "./members";
 import { notificationsRouter } from "./notifications";
 import { plaidRouter } from "./plaid";
-import {
-  alertRulesRouter,
-  budgetsRouter,
-  permissionsRouter,
-  settingsRouter,
-  trustedContactsRouter,
-} from "./settings";
+import { alertRulesRouter, budgetsRouter, permissionsRouter, settingsRouter } from "./settings";
 import { transactionsRouter } from "./transactions";
 
 export const caretakerRouter = {
@@ -21,7 +15,6 @@ export const caretakerRouter = {
   budgets: budgetsRouter,
   permissions: permissionsRouter,
   alertRules: alertRulesRouter,
-  trustedContacts: trustedContactsRouter,
   plaid: plaidRouter,
   transactions: transactionsRouter,
   insights: insightsRouter,

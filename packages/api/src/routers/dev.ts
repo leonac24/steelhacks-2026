@@ -1,12 +1,15 @@
 // Buttons for the live demo. Only mounted when dev tools are enabled.
 import { ORPCError } from "@orpc/server";
-import { user } from "@steelhacks-2026/db/schema/index";
+import { member, memberSettings, user } from "@steelhacks-2026/db/schema/index";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { voiceIdForAssistant } from "../defaults";
 import { devProcedure, publicDevProcedure, requirePrimaryCaretaker } from "../index";
 import { injectMockTransaction } from "../providers/mock";
+import * as activity from "../services/activity";
 import { runAlertsForMember } from "../services/alerts";
+import { startOutboundSession } from "../services/call-sessions";
 import * as changeRequests from "../services/change-requests";
 import { connectDemoBank } from "../services/demo-bank";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
@@ -53,7 +56,9 @@ async function checkAfterNewTransactions(
     console.error(`${source}: budget check failed`, budgets.reason);
 }
 
-function placeCallFor(context: { elevenLabsEnv?: import("../services/outbound-calls").ElevenLabsCallEnv }) {
+function placeCallFor(context: {
+  elevenLabsEnv?: import("../services/outbound-calls").ElevenLabsCallEnv;
+}) {
   if (!context.elevenLabsEnv) {
     throw new ORPCError("PRECONDITION_FAILED", {
       message:
@@ -95,9 +100,12 @@ export const devRouter = {
       return result;
     }),
 
-  // Simulates a new bank transaction, e.g. a $400 gift-card charge. Plaid mode
-  // goes through the Sandbox API; mock mode inserts a row directly. Then runs
-  // the alerts engine over what landed, which is the "June calls you" moment.
+  // Simulates a new bank transaction, e.g. a $400 gift-card charge. Writes
+  // directly to our own tables regardless of BANK_PROVIDER — Plaid Sandbox's
+  // own injection endpoint doesn't reliably surface a specific transaction
+  // on demand, so this is the one path that actually shows up in the UI
+  // right away. Then runs the alerts engine over what landed, which is the
+  // "your assistant calls you" moment.
   injectTransaction: devProcedure
     .input(
       z.object({
@@ -109,15 +117,12 @@ export const devRouter = {
           .refine((n) => n !== 0, "Amount can't be zero"),
         merchantName: z.string().min(1).max(80),
         category: z.string().min(1).max(40).default("other"),
-        // Plaid Sandbox only accepts the present date or up to 14 days back.
         daysAgo: z.number().int().min(0).max(14).optional(),
       }),
     )
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      const sync = context.injectPlaidTransaction
-        ? await context.injectPlaidTransaction(input)
-        : await injectMockTransaction(context.db, input);
+      const sync = await injectMockTransaction(context.db, input);
 
       const alerts = context.elevenLabsEnv
         ? await runAlertsForMember(context.db, placeCallFor(context), input.memberId)
@@ -146,6 +151,60 @@ export const devRouter = {
   processApprovals: devProcedure.handler(({ context }) =>
     changeRequests.processTimeouts(context.db),
   ),
+
+  // "Call me" demo button: places a real outbound call to the member's own
+  // phone right now, independent of whether any alert condition fired —
+  // the fastest way to show off the voice line live.
+  callMe: devProcedure
+    .input(z.object({ memberId: z.string() }))
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      const [m, settings] = await Promise.all([
+        context.db.query.member.findFirst({ where: eq(member.id, input.memberId) }),
+        context.db.query.memberSettings.findFirst({
+          where: eq(memberSettings.memberId, input.memberId),
+        }),
+      ]);
+      if (!m) throw new ORPCError("NOT_FOUND", { message: "Member not found" });
+
+      const placeCall = placeCallFor(context);
+      const assistantName = settings?.assistantName ?? "your assistant";
+      const { conversationId, callSid } = await placeCall({
+        toNumber: m.phoneE164,
+        dynamicVariables: {
+          identified: "yes",
+          member_preferred_name: m.preferredName,
+          call_direction: "outbound",
+          // The agent's prompt only recognizes shortfall_warning,
+          // bill_due_unfunded, unusual_transaction, or deposit_arrived — an
+          // unrecognized call_reason (e.g. a made-up "demo_call") leaves its
+          // opening logic with no matching branch, which is why this hung up
+          // immediately before. deposit_arrived is the only one of the four
+          // with a positive framing, so it's the least misleading pick for a
+          // "nothing's wrong" demo call.
+          call_reason: "deposit_arrived",
+          alert_detail:
+            "This is just a friendly demo call to show how this works — nothing urgent.",
+        },
+        firstMessage: `Hi ${m.preferredName}, it's ${assistantName} calling for a quick demo — but first, could you tell me your PIN?`,
+        voiceId: voiceIdForAssistant(settings?.assistantName),
+      });
+      if (!conversationId) throw new Error("ElevenLabs returned no conversation_id");
+
+      const session = await startOutboundSession(context.db, {
+        memberId: input.memberId,
+        conversationId,
+        twilioCallSid: callSid,
+      });
+      await activity.log(context.db, {
+        memberId: input.memberId,
+        type: "alert_sent",
+        summaryText: `${assistantName} placed a demo call to ${m.preferredName}.`,
+        metadata: { callSessionId: session.id },
+        visibleToCaretaker: true,
+      });
+      return { conversationId, callSid, callSessionId: session.id };
+    }),
 
   // Sign-in page onboarding shortcut: mints a brand-new steward account (no
   // session required to call this) with one nester already set up, and

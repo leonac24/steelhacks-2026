@@ -21,11 +21,7 @@ import {
 } from "../defaults";
 import { hashPin } from "../lib/pin";
 import * as activity from "./activity";
-import {
-  LoginAlreadyLinkedError,
-  NoAccountForEmailError,
-  PhoneInUseError,
-} from "./onboarding-rules";
+import { LoginAlreadyLinkedError, NoAccountForEmailError } from "./onboarding-rules";
 
 // Never return the PIN hash to a client.
 const publicMemberColumns = {
@@ -64,52 +60,41 @@ export type CreateMemberInput = {
 // batch: a half-created member would hold the phone number hostage with no
 // caretaker able to reach it.
 export async function createMember(db: Database, input: CreateMemberInput): Promise<PublicMember> {
-  const existing = await db.query.member.findFirst({
-    where: eq(member.phoneE164, input.phoneE164),
-  });
-  if (existing) throw new PhoneInUseError(input.phoneE164);
-
   const memberId = crypto.randomUUID();
   const consentedAt = input.consented ? new Date() : null;
 
-  try {
-    const [created] = await db.batch([
-      db
-        .insert(member)
-        .values({
-          id: memberId,
-          fullName: input.fullName,
-          preferredName: input.preferredName,
-          phoneE164: input.phoneE164,
-          pinHash: await hashPin(input.pin),
-          timezone: input.timezone,
-        })
-        .returning(publicMemberColumns),
-      db.insert(caretakerLink).values({
-        caretakerUserId: input.caretakerUserId,
-        memberId,
-        role: "primary",
-        memberConsentedAt: consentedAt,
-      }),
-      db.insert(memberSettings).values({ memberId, ...DEFAULT_SETTINGS }),
-      db.insert(budget).values(DEFAULT_BUDGETS.map((b) => ({ memberId, ...b }))),
-      db.insert(alertRule).values(DEFAULT_ALERT_RULES.map((r) => ({ memberId, ...r }))),
-      db.insert(permission).values(DEFAULT_PERMISSIONS.map((p) => ({ memberId, ...p }))),
-      db.insert(activityLog).values({
-        memberId,
-        type: "settings_updated",
-        summaryText: `${input.preferredName} was set up with the default budgets and alerts.`,
-        metadata: { event: "member_created" },
-      }),
-    ]);
-    const row = created[0];
-    if (!row) throw new Error("Failed to create member");
-    return row;
-  } catch (error) {
-    // Lost a race against another signup with the same number.
-    if (isUniqueViolation(error)) throw new PhoneInUseError(input.phoneE164);
-    throw error;
-  }
+  const [created] = await db.batch([
+    db
+      .insert(member)
+      .values({
+        id: memberId,
+        fullName: input.fullName,
+        preferredName: input.preferredName,
+        phoneE164: input.phoneE164,
+        pinHash: await hashPin(input.pin),
+        timezone: input.timezone,
+      })
+      .returning(publicMemberColumns),
+    db.insert(caretakerLink).values({
+      caretakerUserId: input.caretakerUserId,
+      memberId,
+      role: "primary",
+      memberConsentedAt: consentedAt,
+    }),
+    db.insert(memberSettings).values({ memberId, ...DEFAULT_SETTINGS }),
+    db.insert(budget).values(DEFAULT_BUDGETS.map((b) => ({ memberId, ...b }))),
+    db.insert(alertRule).values(DEFAULT_ALERT_RULES.map((r) => ({ memberId, ...r }))),
+    db.insert(permission).values(DEFAULT_PERMISSIONS.map((p) => ({ memberId, ...p }))),
+    db.insert(activityLog).values({
+      memberId,
+      type: "settings_updated",
+      summaryText: `${input.preferredName} was set up with the default budgets and alerts.`,
+      metadata: { event: "member_created" },
+    }),
+  ]);
+  const row = created[0];
+  if (!row) throw new Error("Failed to create member");
+  return row;
 }
 
 export type UpdateMemberInput = {

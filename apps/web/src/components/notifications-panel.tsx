@@ -3,14 +3,25 @@ import { Button } from "@steelhacks-2026/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@steelhacks-2026/ui/components/card";
 import { Skeleton } from "@steelhacks-2026/ui/components/skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ShieldAlert, TrendingUp } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { AlertTriangle, ShieldAlert, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { categoryMeta } from "@/lib/categories";
 import { formatCents, formatIsoDate } from "@/lib/format";
 import { orpc } from "@/utils/orpc";
 
-export function NotificationsPanel({ memberId }: { memberId: string }) {
+// Shown on the dashboard (compact, capped, with a "See more" link) and on
+// the dedicated /notifications page (compact=false, everything, no cap).
+const COMPACT_LIMIT = 5;
+
+export function NotificationsPanel({
+  memberId,
+  compact = false,
+}: {
+  memberId: string;
+  compact?: boolean;
+}) {
   const queryClient = useQueryClient();
 
   const budgetWarnings = useQuery(
@@ -56,7 +67,19 @@ export function NotificationsPanel({ memberId }: { memberId: string }) {
   );
 
   const isLoading = budgetWarnings.isLoading || fraudAlerts.isLoading;
-  const totalCount = (budgetWarnings.data?.length ?? 0) + (fraudAlerts.data?.length ?? 0);
+  const budgetItems = budgetWarnings.data ?? [];
+  const fraudItems = fraudAlerts.data ?? [];
+  const totalCount = budgetItems.length + fraudItems.length;
+
+  // Budget warnings first (usually few, actionable), then fraud alerts,
+  // newest first; capped in compact mode so the dashboard card doesn't turn
+  // into a wall of near-duplicate "Large charge" entries from demo testing.
+  const shownBudgetItems = compact ? budgetItems.slice(0, COMPACT_LIMIT) : budgetItems;
+  const remainingSlots = Math.max(0, COMPACT_LIMIT - shownBudgetItems.length);
+  const shownFraudItems = compact ? fraudItems.slice(0, remainingSlots) : fraudItems;
+  const hiddenCount = compact
+    ? budgetItems.length - shownBudgetItems.length + (fraudItems.length - shownFraudItems.length)
+    : 0;
 
   return (
     <Card>
@@ -90,7 +113,7 @@ export function NotificationsPanel({ memberId }: { memberId: string }) {
           <p className="text-muted-foreground text-sm">No alerts right now.</p>
         )}
 
-        {budgetWarnings.data?.map((w) => {
+        {shownBudgetItems.map((w) => {
           const meta = categoryMeta(w.category);
           return (
             <div key={w.category} className="flex items-start gap-3 py-3">
@@ -112,17 +135,35 @@ export function NotificationsPanel({ memberId }: { memberId: string }) {
           );
         })}
 
-        {fraudAlerts.data?.map((a) => (
-          <div key={a.id} className="flex items-start gap-3 py-3">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-            <div>
-              <p className="text-sm">{a.summaryText}</p>
-              <p className="text-muted-foreground text-xs">
-                {new Date(a.createdAt).toLocaleString()}
-              </p>
+        {shownFraudItems.map((a) => {
+          const severity = a.metadata.severity === "warning" ? "warning" : "danger";
+          return (
+            <div key={a.id} className="flex items-start gap-3 py-3">
+              {severity === "warning" ? (
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              ) : (
+                <ShieldAlert className="text-destructive mt-0.5 size-4 shrink-0" />
+              )}
+              <div>
+                <p className="text-sm">{a.summaryText}</p>
+                <p className="text-muted-foreground text-xs">
+                  {new Date(a.createdAt).toLocaleString()}
+                </p>
+              </div>
             </div>
+          );
+        })}
+
+        {compact && hiddenCount > 0 && (
+          <div className="pt-3">
+            <Link
+              to="/notifications"
+              className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+            >
+              See {hiddenCount} more
+            </Link>
           </div>
-        ))}
+        )}
       </CardContent>
     </Card>
   );

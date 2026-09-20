@@ -14,7 +14,7 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@steelhacks-2026/ui/components/sidebar";
-import { createFileRoute, Link, Outlet, redirect, useMatches, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useMatches } from "@tanstack/react-router";
 import {
   Armchair,
   Bell,
@@ -26,8 +26,11 @@ import {
   Moon,
   PiggyBank,
   Receipt,
+  Settings,
   Sun,
 } from "lucide-react";
+
+import { useState } from "react";
 
 import { Logo } from "@/components/logo";
 import { MemberSwitcher } from "@/components/member-switcher";
@@ -76,6 +79,7 @@ const NAV_GROUPS = [
     items: [
       { to: "/approvals", label: "Approvals", icon: CheckSquare },
       { to: "/notifications", label: "Notifications", icon: Bell },
+      { to: "/settings", label: "Settings", icon: Settings },
     ],
   },
   {
@@ -180,19 +184,29 @@ function ThemeToggleButton() {
 }
 
 function SignOutButton() {
-  const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function signOut() {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await authClient.signOut();
+    } catch (error) {
+      // Even if the request itself failed, don't strand the user signed
+      // in-looking — fall through to the hard redirect below either way.
+      console.error("Sign out request failed", error);
+    }
+    // A full navigation (not the client router) so every cached bit of
+    // session state — react-query, the sidebar's member selection, the
+    // authClient session store — resets in one shot instead of relying on
+    // each of them to notice the session changed underneath them.
+    window.location.assign("/");
+  }
 
   return (
-    <SidebarMenuButton
-      tooltip="Sign out"
-      onClick={() =>
-        authClient.signOut({
-          fetchOptions: { onSuccess: () => navigate({ to: "/" }) },
-        })
-      }
-    >
+    <SidebarMenuButton tooltip="Sign out" disabled={isSigningOut} onClick={() => void signOut()}>
       <LogOut />
-      <span>Sign out</span>
+      <span>{isSigningOut ? "Signing out…" : "Sign out"}</span>
     </SidebarMenuButton>
   );
 }

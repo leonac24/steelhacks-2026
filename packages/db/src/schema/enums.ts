@@ -35,7 +35,6 @@ export const changeType = pgEnum("change_type", [
   "quiet_hours_update",
   "alert_rule_toggle",
   "safety_buffer_update",
-  "trusted_contact_update",
 ]);
 
 // Permissions are finer than change types because direction matters: lowering
@@ -50,7 +49,6 @@ export const permissionChangeType = pgEnum("permission_change_type", [
   "alert_disable",
   "safety_buffer_increase",
   "safety_buffer_decrease",
-  "trusted_contact_update",
 ]);
 
 export const permissionTier = pgEnum("permission_tier", [

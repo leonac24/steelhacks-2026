@@ -12,7 +12,6 @@ import {
   LoginAlreadyLinkedError,
   NoAccountForEmailError,
   normalizePhone,
-  PhoneInUseError,
 } from "../../services/onboarding-rules";
 
 const memberInput = z.object({ memberId: z.string() });
@@ -80,18 +79,11 @@ export const membersRouter = {
           message: "The member has to agree before you can set this up",
         });
       }
-      try {
-        return await onboarding.createMember(context.db, {
-          ...input,
-          preferredName: input.preferredName ?? defaultPreferredName(input.fullName),
-          caretakerUserId: context.session.user.id,
-        });
-      } catch (error) {
-        if (error instanceof PhoneInUseError) {
-          throw new ORPCError("CONFLICT", { message: error.message });
-        }
-        throw error;
-      }
+      return onboarding.createMember(context.db, {
+        ...input,
+        preferredName: input.preferredName ?? defaultPreferredName(input.fullName),
+        caretakerUserId: context.session.user.id,
+      });
     }),
 
   update: protectedProcedure

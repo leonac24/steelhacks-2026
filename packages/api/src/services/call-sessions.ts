@@ -101,16 +101,20 @@ export async function verifySessionPin(
     return { ok: false, reason: "locked" };
   }
 
-  if (await verifyPin(input.pin, sessionMember.pinHash)) {
+  // The agent is only instructed to pass "digits only" — nothing enforces
+  // that. Speech-to-text + an LLM tool call routinely produces "1 2 3 4",
+  // "1-2-3-4", or "it's 1234", none of which will ever bcrypt-match a hash
+  // made from a plain "1234", so a correct PIN would always come back
+  // "wrong". Strip everything but digits before comparing.
+  const normalizedPin = input.pin.replace(/\D/g, "");
+
+  if (normalizedPin && (await verifyPin(normalizedPin, sessionMember.pinHash))) {
     await db.update(callSession).set({ verified: true }).where(eq(callSession.id, session.id));
     return { ok: true };
   }
 
   const attempts = session.pinAttempts + 1;
-  await db
-    .update(callSession)
-    .set({ pinAttempts: attempts })
-    .where(eq(callSession.id, session.id));
+  await db.update(callSession).set({ pinAttempts: attempts }).where(eq(callSession.id, session.id));
 
   if (attempts >= MAX_PIN_ATTEMPTS) {
     const summary = `${sessionMember.preferredName}'s phone line was locked after ${MAX_PIN_ATTEMPTS} failed PIN attempts.`;

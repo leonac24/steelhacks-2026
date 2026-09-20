@@ -1,6 +1,6 @@
 # June — Phone Banking for Elders
 
-Helps older adults understand and manage their money by phone. A member calls (or is called by) June, a voice agent; a family caretaker supervises via a web dashboard.
+Helps older adults understand and manage their money by phone. A member calls (or is called by) June, a voice agent; a family trusted contact supervises via a web dashboard.
 
 ## Language
 
@@ -10,12 +10,9 @@ Helps older adults understand and manage their money by phone. A member calls (o
 An older adult whose finances June helps with. Identified on the phone by caller ID + PIN; a Better Auth user only if they also use the native app.
 _Avoid_: elder, senior, customer, user
 
-**Caretaker**:
-A family member who links the bank, sets budgets and rules, and approves sensitive changes. Always a Better Auth user. The `primary` caretaker can change settings and decide approvals; a `viewer` can only look.
-_Avoid_: guardian, admin, family member
-
 **Trusted Contact**:
-A person June may reference or involve on the member's behalf (e.g. a daughter's phone number). Not an account holder.
+A family member who oversees the member's finances: links the bank, sets budgets and rules, and approves sensitive changes. Always a Better Auth user. The `primary` trusted contact can change settings and decide approvals; a `viewer` can only look.
+_Avoid_: caretaker, guardian, steward, admin, family member
 
 **June**:
 The voice agent persona. One ElevenLabs agent handles both inbound and outbound calls.
@@ -40,11 +37,12 @@ A member-initiated change (by voice) that moves through propose → confirm → 
 _Avoid_: edit, update request
 
 **Permission Tier**:
-Per-change-type policy deciding what happens after the member confirms: `instant` (applies silently), `instant_notify` (applies, caretaker notified), `needs_approval` (waits for the primary caretaker, then applies or expires on timeout).
+Per-change-type policy deciding what happens after the member confirms: `instant` (applies silently), `instant_notify` (applies, trusted contact notified), `needs_approval` (waits for the primary trusted contact, then applies or expires on timeout).
 _Avoid_: approval level, rule
 
-**Caretaker Edit**:
-A settings change made by a caretaker on the dashboard. Applies directly — never a Change Request.
+**Trusted Contact Edit**:
+A settings change made by a trusted contact on the dashboard. Applies directly — never a Change Request.
+_Avoid_: caretaker edit
 
 ### Alerts
 
@@ -68,7 +66,7 @@ Available balance minus bills due before the next income minus the safety buffer
 _Avoid_: disposable income, remaining balance
 
 **Safety Buffer**:
-A caretaker-set cushion that Safe to Spend always keeps untouched.
+A trusted-contact-set cushion that Safe to Spend always keeps untouched.
 
 **Shortfall**:
 A projection that the member's balance won't cover bills due before the next income arrives.

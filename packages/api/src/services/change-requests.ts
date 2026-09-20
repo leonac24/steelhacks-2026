@@ -8,7 +8,6 @@ import {
   changeRequest,
   memberSettings,
   permission,
-  trustedContact,
 } from "@steelhacks-2026/db/schema/index";
 import { and, eq, lt } from "drizzle-orm";
 
@@ -86,10 +85,6 @@ async function applyChange(db: Database, memberId: string, change: ParsedChange)
         .update(memberSettings)
         .set({ safetyBufferCents: change.payload.safetyBufferCents })
         .where(eq(memberSettings.memberId, memberId));
-      return;
-    case "trusted_contact_update":
-      // TODO: support editing/removing; for now voice can only add a contact.
-      await db.insert(trustedContact).values({ memberId, ...change.payload });
       return;
   }
 }

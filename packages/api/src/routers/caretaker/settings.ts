@@ -11,7 +11,6 @@ import {
   permissionChangeType,
   permissionTier,
   reminderMode,
-  trustedContact,
 } from "@steelhacks-2026/db/schema/index";
 import { and, asc, eq } from "drizzle-orm";
 import z from "zod";
@@ -221,57 +220,5 @@ export const alertRulesRouter = {
         .returning();
       await logEdit(context, memberId, `turned ${enabled ? "on" : "off"} ${type} alerts.`);
       return row;
-    }),
-};
-
-export const trustedContactsRouter = {
-  list: protectedProcedure
-    .input(memberInput)
-    .use(requireCaretaker)
-    .handler(({ input, context }) =>
-      context.db
-        .select()
-        .from(trustedContact)
-        .where(eq(trustedContact.memberId, input.memberId))
-        .orderBy(asc(trustedContact.createdAt)),
-    ),
-
-  // Creates when `id` is omitted, otherwise edits that contact.
-  upsert: protectedProcedure
-    .input(
-      memberInput.extend({
-        id: z.string().optional(),
-        ...payloadSchemas.trusted_contact_update.shape,
-      }),
-    )
-    .use(requirePrimaryCaretaker)
-    .handler(async ({ input, context }) => {
-      const { id, memberId, ...fields } = input;
-      const [row] = id
-        ? await context.db
-            .update(trustedContact)
-            .set(fields)
-            .where(and(eq(trustedContact.id, id), eq(trustedContact.memberId, memberId)))
-            .returning()
-        : await context.db
-            .insert(trustedContact)
-            .values({ memberId, ...fields })
-            .returning();
-      if (!row) throw new ORPCError("NOT_FOUND", { message: "Trusted contact not found" });
-      await logEdit(context, memberId, `${id ? "updated" : "added"} trusted contact ${row.name}.`);
-      return row;
-    }),
-
-  remove: protectedProcedure
-    .input(memberInput.extend({ id: z.string() }))
-    .use(requirePrimaryCaretaker)
-    .handler(async ({ input, context }) => {
-      const [row] = await context.db
-        .delete(trustedContact)
-        .where(and(eq(trustedContact.id, input.id), eq(trustedContact.memberId, input.memberId)))
-        .returning();
-      if (!row) throw new ORPCError("NOT_FOUND", { message: "Trusted contact not found" });
-      await logEdit(context, input.memberId, `removed trusted contact ${row.name}.`);
-      return { id: row.id };
     }),
 };

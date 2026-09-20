@@ -6,7 +6,7 @@ import {
   transaction,
 } from "@steelhacks-2026/db/schema/index";
 import { and, eq, inArray } from "drizzle-orm";
-import { Products } from "plaid";
+import { Products, SandboxItemFireWebhookRequestWebhookCodeEnum } from "plaid";
 import type { PlaidApi } from "plaid";
 
 import {
@@ -191,7 +191,16 @@ export class PlaidProvider implements BankDataProvider {
 export async function createSandboxPlaidItem(
   plaid: PlaidApi,
   db: Database,
-  input: { memberId: string; institutionId?: string; institutionName?: string },
+  input: {
+    memberId: string;
+    institutionId?: string;
+    institutionName?: string;
+    // Registered on the item so sandboxItemFireWebhook (used to nudge new
+    // sandbox transactions into transactionsSync right away) has somewhere
+    // to "deliver" to — Plaid rejects fire_webhook on items with none set.
+    // Doesn't need to be reachable for that to work.
+    webhookUrl?: string;
+  },
 ): Promise<{ bankConnectionId: string }> {
   const institutionId = input.institutionId ?? "ins_109508";
   const sandboxToken = await plaid.sandboxPublicTokenCreate({
@@ -201,6 +210,12 @@ export async function createSandboxPlaidItem(
   const exchange = await plaid.itemPublicTokenExchange({
     public_token: sandboxToken.data.public_token,
   });
+  if (input.webhookUrl) {
+    await plaid.itemWebhookUpdate({
+      access_token: exchange.data.access_token,
+      webhook: input.webhookUrl,
+    });
+  }
 
   const existing = await db.query.bankConnection.findFirst({
     where: and(eq(bankConnection.memberId, input.memberId), eq(bankConnection.provider, "plaid")),
@@ -240,7 +255,14 @@ export async function createSandboxPlaidItem(
 export async function injectSandboxTransaction(
   plaid: PlaidApi,
   db: Database,
-  input: { memberId: string; amountCents: number; merchantName: string; daysAgo?: number },
+  input: {
+    memberId: string;
+    amountCents: number;
+    merchantName: string;
+    daysAgo?: number;
+    // See createSandboxPlaidItem — needed for sandboxItemFireWebhook below.
+    webhookUrl?: string;
+  },
 ): Promise<SyncResult> {
   let connection = await db.query.bankConnection.findFirst({
     where: and(eq(bankConnection.memberId, input.memberId), eq(bankConnection.provider, "plaid")),
@@ -249,12 +271,19 @@ export async function injectSandboxTransaction(
   // "connect sandbox bank" button first, mint one automatically the first
   // time they try to simulate a transaction.
   if (!connection?.accessToken) {
-    await createSandboxPlaidItem(plaid, db, { memberId: input.memberId });
+    await createSandboxPlaidItem(plaid, db, {
+      memberId: input.memberId,
+      webhookUrl: input.webhookUrl,
+    });
     connection = await db.query.bankConnection.findFirst({
-      where: and(
-        eq(bankConnection.memberId, input.memberId),
-        eq(bankConnection.provider, "plaid"),
-      ),
+      where: and(eq(bankConnection.memberId, input.memberId), eq(bankConnection.provider, "plaid")),
+    });
+  } else if (input.webhookUrl) {
+    // A connection made before this webhook requirement existed won't have
+    // one registered yet — set it now so fire_webhook below doesn't 400.
+    await plaid.itemWebhookUpdate({
+      access_token: connection.accessToken,
+      webhook: input.webhookUrl,
     });
   }
   if (!connection?.accessToken) {
@@ -280,5 +309,23 @@ export async function injectSandboxTransaction(
     ],
   });
 
-  return new PlaidProvider(db, plaid).syncTransactions(input.memberId);
+  // Sandbox transactions don't show up in transactionsSync until the item's
+  // sync cursor is told there's something new. In production a webhook does
+  // this on its own; in Sandbox we have to fire it ourselves.
+  // https://plaid.com/docs/sandbox/webhooks/#sync_updates_available
+  await plaid.sandboxItemFireWebhook({
+    access_token: connection.accessToken,
+    webhook_code: SandboxItemFireWebhookRequestWebhookCodeEnum.SyncUpdatesAvailable,
+  });
+
+  // Even after firing the webhook, Sandbox can take a moment to actually
+  // apply it — retry briefly instead of silently reporting success with
+  // zero rows.
+  const provider = new PlaidProvider(db, plaid);
+  let sync = await provider.syncTransactions(input.memberId);
+  for (let attempt = 0; sync.added.length === 0 && attempt < 8; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    sync = await provider.syncTransactions(input.memberId);
+  }
+  return sync;
 }

@@ -34,13 +34,6 @@ export function defaultPreferredName(fullName: string): string {
   return first;
 }
 
-export class PhoneInUseError extends Error {
-  constructor(phoneE164: string) {
-    super(`${phoneE164} already belongs to another member`);
-    this.name = "PhoneInUseError";
-  }
-}
-
 export class NoAccountForEmailError extends Error {
   constructor(email: string) {
     super(`No account found for ${email}. Have them sign up in the app first.`);

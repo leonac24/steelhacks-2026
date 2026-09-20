@@ -33,11 +33,6 @@ export const payloadSchemas = {
   quiet_hours_update: z.object({ start: clockTime, end: clockTime }),
   alert_rule_toggle: z.object({ type: z.enum(alertRuleType.enumValues), enabled: z.boolean() }),
   safety_buffer_update: z.object({ safetyBufferCents: cents }),
-  trusted_contact_update: z.object({
-    name: z.string().trim().min(1).max(80),
-    phoneE164: z.string().regex(/^\+[1-9]\d{7,14}$/, "Use E.164, e.g. +14125550123"),
-    relationship: z.string().trim().min(1).max(40),
-  }),
 } satisfies Record<ChangeType, z.ZodType>;
 
 export type ChangePayload<T extends ChangeType> = z.infer<(typeof payloadSchemas)[T]>;
@@ -74,7 +69,6 @@ export function permissionFor(change: ParsedChange, current: CurrentState): Perm
         : "safety_buffer_decrease";
     case "reminder_mode_update":
     case "quiet_hours_update":
-    case "trusted_contact_update":
       return change.changeType;
   }
 }
@@ -123,8 +117,6 @@ export function summarizeChange(change: ParsedChange, current: CurrentState): st
       const verb = safetyBufferCents >= current.safetyBufferCents ? "Raise" : "Lower";
       return `${verb} the safety cushion from ${formatCentsForSpeech(current.safetyBufferCents)} to ${formatCentsForSpeech(safetyBufferCents)}.`;
     }
-    case "trusted_contact_update":
-      return `Add ${change.payload.name} (${change.payload.relationship}) as a trusted contact.`;
   }
 }
 

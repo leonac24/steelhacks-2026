@@ -13,7 +13,12 @@ export const member = pgTable(
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     fullName: text("full_name").notNull(),
     preferredName: text("preferred_name").notNull(),
-    phoneE164: text("phone_e164").notNull().unique(),
+    // Not unique on purpose — demo members created via "simulate new user"
+    // reuse the same real tester phone across multiple members so outbound
+    // demo calls always reach a real handset. Inbound call routing
+    // (call-sessions.ts) resolves the caller by phone + PIN together, so a
+    // shared phone number across members is only ambiguous for that path.
+    phoneE164: text("phone_e164").notNull(),
     pinHash: text("pin_hash").notNull(),
     timezone: text("timezone").notNull().default("America/New_York"),
     language: text("language").notNull().default("en"),
@@ -42,19 +47,4 @@ export const caretakerLink = pgTable(
     uniqueIndex("caretaker_link_caretaker_member_idx").on(t.caretakerUserId, t.memberId),
     index("caretaker_link_member_idx").on(t.memberId),
   ],
-);
-
-export const trustedContact = pgTable(
-  "trusted_contact",
-  {
-    id: id(),
-    memberId: text("member_id")
-      .notNull()
-      .references(() => member.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    phoneE164: text("phone_e164").notNull(),
-    relationship: text("relationship").notNull(),
-    ...timestamps(),
-  },
-  (t) => [index("trusted_contact_member_idx").on(t.memberId)],
 );

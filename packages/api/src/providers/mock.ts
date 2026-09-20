@@ -57,31 +57,47 @@ export class MockProvider implements BankDataProvider {
 }
 
 // Dev/demo only: inserts a fake bank transaction (e.g. a $400 unusual charge)
-// and syncs so it comes back in `added`, the same shape the Plaid path
-// produces. Lets the demo run end to end with BANK_PROVIDER=mock.
+// directly into our own tables and returns it as "added", the same shape a
+// real sync produces. Works regardless of whether the member's bank
+// connection is mock or Plaid — Plaid Sandbox's own transaction-injection
+// endpoint (sandboxTransactionsCreate) turned out to be unreliable for
+// getting a specific transaction to show up on demand (it's meant for
+// generating semi-random test data, not literally injecting what you ask
+// for), so this is the one path both providers use for the demo buttons.
 export async function injectMockTransaction(
   db: Database,
-  input: { memberId: string; amountCents: number; merchantName: string; daysAgo?: number },
+  input: {
+    memberId: string;
+    amountCents: number;
+    merchantName: string;
+    category?: string;
+    daysAgo?: number;
+  },
 ): Promise<SyncResult> {
   const account = await db.query.bankAccount.findFirst({
     where: eq(bankAccount.memberId, input.memberId),
   });
   if (!account) {
-    throw new Error("No bank account for this member; seed one first (pnpm run db:seed)");
+    throw new Error("No bank account for this member; connect Demo Bank first");
   }
 
   const date = new Date();
   date.setDate(date.getDate() - (input.daysAgo ?? 0));
   const dateString = date.toISOString().slice(0, 10);
 
-  await db.insert(transaction).values({
-    memberId: input.memberId,
-    bankAccountId: account.id,
-    providerTxnId: `dev-${crypto.randomUUID()}`,
-    date: dateString,
-    amountCents: input.amountCents,
-    merchantName: input.merchantName,
-  });
+  const [row] = await db
+    .insert(transaction)
+    .values({
+      memberId: input.memberId,
+      bankAccountId: account.id,
+      providerTxnId: `dev-${crypto.randomUUID()}`,
+      date: dateString,
+      amountCents: input.amountCents,
+      merchantName: input.merchantName,
+      category: input.category ?? "other",
+    })
+    .returning();
+  if (!row) throw new Error("Failed to insert the demo transaction");
 
   // Keep balances honest so the dashboard and safe-to-spend move during the demo.
   await db
@@ -92,5 +108,5 @@ export async function injectMockTransaction(
     })
     .where(eq(bankAccount.id, account.id));
 
-  return new MockProvider(db).syncTransactions(input.memberId);
+  return { added: [row], modified: 0, removed: 0 };
 }

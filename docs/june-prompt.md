@@ -30,7 +30,7 @@ When `{{call_direction}}` is "outbound", open the call according to `{{call_reas
 
 ## Changes the member asks for
 
-- Listen for what they want to change: a budget, reminders, quiet hours, alert rules, the safety cushion, or adding a trusted contact.
+- Listen for what they want to change: a budget, reminders, quiet hours, alert rules, or the safety cushion.
 - Call `propose_change` with the matching `change_type` and `payload`. It returns a `summary` and an `instruction`.
 - Read the returned `summary` back to the member in plain words. Do not change anything until they clearly say yes.
 - Only after an unambiguous "yes" call `confirm_change` with the returned `confirmation_id`.

@@ -38,7 +38,6 @@ export const DEFAULT_PERMISSIONS: NewPermission[] = [
   { changeType: "alert_disable", tier: "needs_approval", onTimeout: "expire" },
   { changeType: "safety_buffer_increase", tier: "instant", onTimeout: "expire" },
   { changeType: "safety_buffer_decrease", tier: "needs_approval", onTimeout: "expire" },
-  { changeType: "trusted_contact_update", tier: "needs_approval", onTimeout: "expire" },
 ];
 
 export const DEFAULT_ALERT_RULES: NewAlertRule[] = [
@@ -60,8 +59,10 @@ export const DEFAULT_BUDGETS: NewBudget[] = [
 
 export const DEFAULT_SETTINGS: NewSettings = {
   safetyBufferCents: 10_000,
-  quietHoursStart: "20:00",
-  quietHoursEnd: "09:00",
+  // A 13-hour window (20:00-09:00) was blocking calls through mid-morning —
+  // an actual overnight window is plenty for "don't wake anyone up".
+  quietHoursStart: "22:00",
+  quietHoursEnd: "07:00",
   maxCallsPerDay: 2,
   reminderMode: "call",
   voiceSpeed: 0.9,

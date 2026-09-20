@@ -68,10 +68,12 @@ function RouteComponent() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">
-        {activeMember ? `Welcome back — here's ${activeMember.preferredName}'s dashboard` : "Welcome back"}
+        {activeMember
+          ? `Welcome back — here's ${activeMember.preferredName}'s dashboard`
+          : "Welcome back"}
       </h1>
 
-      <NotificationsPanel memberId={activeMemberId!} />
+      <NotificationsPanel memberId={activeMemberId!} compact />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
@@ -171,7 +173,9 @@ function RouteComponent() {
                     <p className="text-muted-foreground text-xs">{formatIsoDate(t.date)}</p>
                   </div>
                 </div>
-                <span className={t.amountCents < 0 ? "font-medium text-emerald-600" : "font-medium"}>
+                <span
+                  className={t.amountCents < 0 ? "font-medium text-emerald-600" : "font-medium"}
+                >
                   {formatSignedCents(t.amountCents)}
                 </span>
               </div>
@@ -219,10 +223,7 @@ function StatCard({
           <Skeleton className="h-8 w-24" />
         ) : (
           <p
-            className={cn(
-              "text-2xl font-semibold tracking-tight",
-              hero && "text-primary text-3xl",
-            )}
+            className={cn("text-2xl font-semibold tracking-tight", hero && "text-primary text-3xl")}
           >
             {value}
           </p>

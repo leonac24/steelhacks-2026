@@ -27,7 +27,6 @@ describe("parseChange", () => {
     ["budget_update", { category: "groceries", monthlyLimitCents: -1 }],
     ["quiet_hours_update", { start: "8pm", end: "09:00" }],
     ["alert_rule_toggle", { type: "everything", enabled: false }],
-    ["trusted_contact_update", { name: "Sam", phoneE164: "412-555-0100", relationship: "son" }],
   ] as const)("rejects bad %s payloads", (changeType, payload) => {
     expect(() => parseChange(changeType, payload)).toThrow();
   });

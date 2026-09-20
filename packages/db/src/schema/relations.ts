@@ -3,14 +3,13 @@ import { relations } from "drizzle-orm";
 import { activityLog, alertSent, callSession, changeRequest } from "./activity";
 import { user } from "./auth";
 import { bankAccount, bankConnection, recurringStream, transaction } from "./banking";
-import { caretakerLink, member, trustedContact } from "./member";
+import { caretakerLink, member } from "./member";
 import { alertRule, budget, memberSettings, permission } from "./settings";
 
 export const memberRelations = relations(member, ({ one, many }) => ({
   user: one(user, { fields: [member.userId], references: [user.id] }),
   settings: one(memberSettings),
   caretakerLinks: many(caretakerLink),
-  trustedContacts: many(trustedContact),
   bankConnections: many(bankConnection),
   bankAccounts: many(bankAccount),
   transactions: many(transaction),
@@ -27,10 +26,6 @@ export const memberRelations = relations(member, ({ one, many }) => ({
 export const caretakerLinkRelations = relations(caretakerLink, ({ one }) => ({
   caretaker: one(user, { fields: [caretakerLink.caretakerUserId], references: [user.id] }),
   member: one(member, { fields: [caretakerLink.memberId], references: [member.id] }),
-}));
-
-export const trustedContactRelations = relations(trustedContact, ({ one }) => ({
-  member: one(member, { fields: [trustedContact.memberId], references: [member.id] }),
 }));
 
 export const bankConnectionRelations = relations(bankConnection, ({ one, many }) => ({
