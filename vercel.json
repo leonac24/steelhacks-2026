@@ -7,6 +7,10 @@
       "installCommand": "cd ../.. && pnpm install"
     }
   },
+  "crons": [
+    { "path": "/api/cron/alerts", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/approvals", "schedule": "0 13 * * *" }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
