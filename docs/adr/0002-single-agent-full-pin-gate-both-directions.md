@@ -1,6 +1,6 @@
-# One June agent for inbound and outbound, with the full PIN gate in both directions
+# One Robin agent for inbound and outbound, with the full PIN gate in both directions
 
-We use a single ElevenLabs agent for member-initiated calls and proactive alert calls, differentiated per call by dynamic variables (`call_direction`, `call_reason`, alert context) and a first-message override passed to the outbound-call API — not a second "announcer" agent. And outbound calls do not relax security: even though we dialed the member, anyone can pick up the phone, so June asks for the PIN before disclosing balances, transactions, or alert specifics, exactly as on inbound calls.
+We use a single ElevenLabs agent for member-initiated calls and proactive alert calls, differentiated per call by dynamic variables (`call_direction`, `call_reason`, alert context) and a first-message override passed to the outbound-call API — not a second "announcer" agent. And outbound calls do not relax security: even though we dialed the member, anyone can pick up the phone, so Robin asks for the PIN before disclosing balances, transactions, or alert specifics, exactly as on inbound calls.
 
 ## Considered Options
 

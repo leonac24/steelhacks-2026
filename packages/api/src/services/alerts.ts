@@ -63,15 +63,15 @@ const EMAILABLE_TYPES: AlertRuleType[] = ["unusual_txn", "deposit_arrived"];
 function buildFirstMessage(ruleType: AlertRuleType, name: string): string {
   switch (ruleType) {
     case "shortfall":
-      return `Hi ${name}, it's June with a heads-up about your money — but first, could you tell me your PIN?`;
+      return `Hi ${name}, it's Robin with a heads-up about your money — but first, could you tell me your PIN?`;
     case "bill_due_unfunded":
-      return `Hi ${name}, it's June about a bill that's coming due — but first, could you tell me your PIN?`;
+      return `Hi ${name}, it's Robin about a bill that's coming due — but first, could you tell me your PIN?`;
     case "unusual_txn":
-      return `Hi ${name}, it's June about a charge on your account I want to check with you — but first, could you tell me your PIN?`;
+      return `Hi ${name}, it's Robin about a charge on your account I want to check with you — but first, could you tell me your PIN?`;
     case "deposit_arrived":
-      return `Hi ${name}, it's June with some good news about a deposit — but first, could you tell me your PIN?`;
+      return `Hi ${name}, it's Robin with some good news about a deposit — but first, could you tell me your PIN?`;
     case "budget_reached":
-      return `Hi ${name}, it's June about a budget you've reached — but first, could you tell me your PIN?`;
+      return `Hi ${name}, it's Robin about a budget you've reached — but first, could you tell me your PIN?`;
   }
 }
 
@@ -362,7 +362,7 @@ export async function runAlertsForMember(
       await activity.log(db, {
         memberId,
         type: "alert_sent",
-        summaryText: `June called ${m.preferredName} about ${RULE_LABELS[candidate.ruleType]}.`,
+        summaryText: `Robin called ${m.preferredName} about ${RULE_LABELS[candidate.ruleType]}.`,
         metadata: { alertId: alertRow.id, callSessionId: session.id },
         visibleToCaretaker: true,
       });

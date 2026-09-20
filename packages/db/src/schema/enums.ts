@@ -28,7 +28,7 @@ export const alertRuleType = pgEnum("alert_rule_type", [
   "budget_reached",
 ]);
 
-// What a member can ask June to change.
+// What a member can ask Robin to change.
 export const changeType = pgEnum("change_type", [
   "budget_update",
   "reminder_mode_update",

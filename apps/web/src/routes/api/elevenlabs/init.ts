@@ -16,7 +16,7 @@ const initBody = z.object({
 });
 
 const UNKNOWN_CALLER_MESSAGE =
-  "Hello, this is June. I'm sorry, but I don't recognize this phone number, and I can only talk with family members who are set up with me. Please ask your family to help set you up. Goodbye for now.";
+  "Hello, this is Robin. I'm sorry, but I don't recognize this phone number, and I can only talk with family members who are set up with me. Please ask your family to help set you up. Goodbye for now.";
 
 export const Route = createFileRoute("/api/elevenlabs/init")({
   server: {
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/elevenlabs/init")({
 
         const identified = (member ? "yes" : "no") as "yes" | "no";
         const firstMessage = member
-          ? `Hello ${member.preferredName}! This is June. Before we talk about your money, could you tell me your PIN?`
+          ? `Hello ${member.preferredName}! This is Robin. Before we talk about your money, could you tell me your PIN?`
           : UNKNOWN_CALLER_MESSAGE;
 
         // Outbound calls (alerts, "Call me") already pick a voice per the

@@ -165,7 +165,7 @@ export async function recordPostCall(
     await activity.log(db, {
       memberId: sessionMember.id,
       type: session.direction === "inbound" ? "call_inbound" : "call_outbound",
-      summaryText: input.summaryText ?? `June spoke with ${sessionMember.preferredName}.`,
+      summaryText: input.summaryText ?? `Robin spoke with ${sessionMember.preferredName}.`,
       metadata: { callSessionId: session.id },
       visibleToCaretaker: true,
     });

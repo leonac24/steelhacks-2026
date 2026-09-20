@@ -95,7 +95,7 @@ export function formatClockForSpeech(time: string): string {
   return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-// One sentence June reads back before the member says yes, and the caretaker sees.
+// One sentence Robin reads back before the member says yes, and the caretaker sees.
 export function summarizeChange(change: ParsedChange, current: CurrentState): string {
   switch (change.changeType) {
     case "budget_update": {

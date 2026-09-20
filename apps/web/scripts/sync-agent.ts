@@ -1,5 +1,5 @@
-// Syncs June's agent config to ElevenLabs: creates/updates the 9 tools from
-// docs/agent-tools.json and patches the agent prompt from docs/june-prompt.md.
+// Syncs Robin's agent config to ElevenLabs: creates/updates the 9 tools from
+// docs/agent-tools.json and patches the agent prompt from docs/robin-prompt.md.
 // Run: pnpm --filter web sync:agent -- --base-url https://<BASE_URL>
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -58,14 +58,14 @@ async function elevenLabs(
 }
 
 const FIRST_MESSAGE =
-  "Hello! This is June. Before we talk about your money, could you tell me your PIN?";
+  "Hello! This is Robin. Before we talk about your money, could you tell me your PIN?";
 
 async function main() {
   const toolsRaw = readFileSync(path.join(docsDir, "agent-tools.json"), "utf8")
     .replaceAll("{{BASE_URL}}", baseUrl!)
     .replaceAll("{{TOOL_SECRET}}", toolSecret!);
   const toolsDoc = JSON.parse(toolsRaw) as { tools: ToolConfig[] };
-  const prompt = readFileSync(path.join(docsDir, "june-prompt.md"), "utf8");
+  const prompt = readFileSync(path.join(docsDir, "robin-prompt.md"), "utf8");
 
   const listRes = (await elevenLabs("/v1/convai/tools")) as {
     tools?: Array<{ id: string; tool_config?: ToolConfig }>;
@@ -107,7 +107,7 @@ async function main() {
       },
     }),
   });
-  console.log(`\nAgent ${agentId} patched with ${toolIds.length} tools + June's prompt.`);
+  console.log(`\nAgent ${agentId} patched with ${toolIds.length} tools + Robin's prompt.`);
 
   console.log(
     "\nReminder (dashboard-only, not exposed via API): in the ElevenLabs dashboard,\n" +
