@@ -7,8 +7,6 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { AppStateProvider } from "@/lib/app-state";
 import type { orpc } from "@/utils/orpc";
 
-import Header from "../components/header";
-
 import appCss from "../index.css?url";
 export interface RouterAppContext {
   orpc: typeof orpc;
@@ -42,14 +40,13 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
         <AppStateProvider>
-          <div className="grid h-svh grid-rows-[auto_1fr] overflow-y-auto">
-            <Header />
+          <div className="h-svh overflow-y-auto">
             <Outlet />
           </div>
         </AppStateProvider>

@@ -1,39 +1,19 @@
-import { Link, useMatches } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
-import { MemberSwitcher } from "./member-switcher";
 import UserMenu from "./user-menu";
 
 export default function Header() {
-  const isAuthed = useMatches().some((m) => m.routeId === "/_auth");
-
-  const links = [
-    { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/budget", label: "Budget" },
-    { to: "/transactions", label: "Transactions" },
-    { to: "/bank", label: "Bank" },
-    { to: "/notifications", label: "Notifications" },
-    { to: "/todos", label: "Todos" },
-  ] as const;
-
   return (
-    <div>
-      <div className="flex flex-row items-center justify-between px-2 py-1">
-        <nav className="flex gap-4 text-lg">
-          {links.map(({ to, label }) => {
-            return (
-              <Link key={to} to={to}>
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="flex items-center gap-2">
-          {isAuthed && <MemberSwitcher />}
-          <UserMenu />
-        </div>
+    <header className="border-b border-border bg-card">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        <Link to="/" className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+            B
+          </span>
+          <span className="text-lg font-semibold tracking-tight">Better Track</span>
+        </Link>
+        <UserMenu />
       </div>
-      <hr />
-    </div>
+    </header>
   );
 }

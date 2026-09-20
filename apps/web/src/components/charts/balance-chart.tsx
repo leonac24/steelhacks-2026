@@ -9,7 +9,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { formatCents, formatIsoDate } from "@/lib/format";
 
 const config = {
-  balanceCents: { label: "Balance", color: "var(--chart-2)" },
+  balanceCents: { label: "Balance", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 export function BalanceChart({ data }: { data: { date: string; balanceCents: number }[] }) {
