@@ -18,6 +18,7 @@ export type Context = {
   createSandboxPlaidItem?: (input: {
     memberId: string;
     institutionId?: string;
+    institutionName?: string;
   }) => Promise<{ bankConnectionId: string }>;
   injectPlaidTransaction?: (input: {
     memberId: string;
@@ -25,4 +26,11 @@ export type Context = {
     merchantName: string;
     daysAgo?: number;
   }) => Promise<SyncResult>;
+  // Set whenever auth is wired up; used by the "simulate new user" onboarding
+  // shortcut to mint a fresh steward account with no session required yet.
+  createUser?: (input: {
+    name: string;
+    email: string;
+    password: string;
+  }) => Promise<{ id: string; email: string }>;
 };

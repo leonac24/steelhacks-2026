@@ -61,6 +61,13 @@ function RootDocument() {
   return (
     <html lang="en">
       <head>
+        {/* Sets .dark before first paint so there's no flash of the wrong theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('steelhacks.theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();",
+          }}
+        />
         <HeadContent />
       </head>
       <body>

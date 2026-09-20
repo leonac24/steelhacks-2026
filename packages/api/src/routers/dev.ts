@@ -2,12 +2,32 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
-import { devProcedure, requirePrimaryCaretaker } from "../index";
+import { devProcedure, publicDevProcedure, requirePrimaryCaretaker } from "../index";
 import { createBankProvider } from "../providers";
 import { injectMockTransaction } from "../providers/mock";
 import * as alerts from "../services/alerts";
 import * as changeRequests from "../services/change-requests";
+import { connectDemoBank } from "../services/demo-bank";
 import { runBudgetCheck, runFraudCheck } from "../services/notifications";
+import * as onboarding from "../services/onboarding";
+
+// A handful of plausible nesters for the "simulate new user" shortcut — just
+// enough variety that repeat demos don't all look identical.
+const DEMO_NESTERS = [
+  { fullName: "Eleanor Chen", preferredName: "Ellie" },
+  { fullName: "Walter Nguyen", preferredName: "Walt" },
+  { fullName: "Rosa Delgado", preferredName: "Rosa" },
+  { fullName: "Harold Jackson", preferredName: "Harold" },
+] as const;
+
+function randomDemoPhone(): string {
+  const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join("");
+  return `+1555${digits}`;
+}
+
+function randomPin(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
 async function checkAfterNewTransactions(
   db: Parameters<typeof runFraudCheck>[0],
@@ -118,4 +138,46 @@ export const devRouter = {
   processApprovals: devProcedure.handler(({ context }) =>
     changeRequests.processTimeouts(context.db),
   ),
+
+  // Sign-in page onboarding shortcut: mints a brand-new steward account (no
+  // session required to call this) with one nester already set up, and
+  // optionally connects Demo Bank so there's real data to show right away.
+  // No pre-seeded history is involved — this is the same path a real new
+  // user would go through.
+  simulateNewUser: publicDevProcedure
+    .input(z.object({ connectDemoBank: z.boolean().default(false) }))
+    .handler(async ({ input, context }) => {
+      if (!context.createUser) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "User creation isn't wired up in this environment",
+        });
+      }
+      const suffix = crypto.randomUUID().slice(0, 8);
+      const email = `demo-${suffix}@nestegg.dev`;
+      const password = "demo-password-123";
+      const newUser = await context.createUser({ name: "New Steward", email, password });
+
+      const nester = DEMO_NESTERS[Math.floor(Math.random() * DEMO_NESTERS.length)]!;
+      const member = await onboarding.createMember(context.db, {
+        caretakerUserId: newUser.id,
+        fullName: nester.fullName,
+        preferredName: nester.preferredName,
+        phoneE164: randomDemoPhone(),
+        pin: randomPin(),
+        timezone: "America/New_York",
+        consented: true,
+      });
+
+      let bankConnected = false;
+      if (input.connectDemoBank) {
+        try {
+          await connectDemoBank(context, member.id);
+          bankConnected = true;
+        } catch (error) {
+          console.error("simulateNewUser: failed to connect demo bank", error);
+        }
+      }
+
+      return { email, password, memberId: member.id, bankConnected };
+    }),
 };

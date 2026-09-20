@@ -25,6 +25,7 @@ export const alertRuleType = pgEnum("alert_rule_type", [
   "bill_due_unfunded",
   "unusual_txn",
   "deposit_arrived",
+  "budget_reached",
 ]);
 
 // What a member can ask June to change.
@@ -86,7 +87,7 @@ export const activityType = pgEnum("activity_type", [
   "budget_exceeded_warning",
 ]);
 
-export const alertChannel = pgEnum("alert_channel", ["call", "sms"]);
+export const alertChannel = pgEnum("alert_channel", ["call", "sms", "email"]);
 
 export const alertSendStatus = pgEnum("alert_send_status", [
   "queued",

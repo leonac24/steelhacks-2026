@@ -24,7 +24,7 @@ export const bankProvider = createBankProvider(db, ENV.BANK_PROVIDER, plaidConfi
 // the dev router and could back a `/demo` "connect sandbox bank" / "inject
 // transaction" button.
 export const createSandboxItem = plaidClient
-  ? (input: { memberId: string; institutionId?: string }) =>
+  ? (input: { memberId: string; institutionId?: string; institutionName?: string }) =>
       createSandboxPlaidItem(plaidClient, db, input)
   : undefined;
 
@@ -32,3 +32,8 @@ export const injectPlaidTransaction = plaidClient
   ? (input: { memberId: string; amountCents: number; merchantName: string; daysAgo?: number }) =>
       injectSandboxTransaction(plaidClient, db, input)
   : undefined;
+
+// Mints a fresh steward account with no session required — backs the
+// sign-in page's "simulate new user" shortcut.
+export const createUser = (input: { name: string; email: string; password: string }) =>
+  auth.api.signUpEmail({ body: input }).then((result) => result.user);

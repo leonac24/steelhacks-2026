@@ -5,6 +5,7 @@
 import type { Database } from "@steelhacks-2026/db";
 import {
   activityLog,
+  alertRule,
   budget,
   caretakerLink,
   member,
@@ -18,6 +19,20 @@ import * as activity from "./activity";
 import { detectFraud } from "./fraud";
 import { categoryBreakdown } from "./insights";
 import { sendNotificationEmail } from "./mailer";
+
+// Whether the steward opted in to emails for this alert type (default yes,
+// matching the pre-onboarding behavior of always emailing).
+async function stewardWantsEmail(
+  db: Database,
+  memberId: string,
+  type: "unusual_txn" | "budget_reached",
+): Promise<boolean> {
+  const rule = await db.query.alertRule.findFirst({
+    where: and(eq(alertRule.memberId, memberId), eq(alertRule.type, type)),
+  });
+  if (!rule) return true;
+  return rule.enabled && rule.notifySteward;
+}
 
 // Every caretaker (primary or viewer) linked to this member, for notification emails.
 export async function caretakerEmails(db: Database, memberId: string): Promise<string[]> {
@@ -120,7 +135,7 @@ export async function runFraudCheck(db: Database, memberId: string): Promise<Che
   }
 
   let emailed = false;
-  if (newFindings.length > 0) {
+  if (newFindings.length > 0 && (await stewardWantsEmail(db, memberId, "unusual_txn"))) {
     const emails = await caretakerEmails(db, memberId);
     const body = newFindings
       .map((f) => {
@@ -171,7 +186,7 @@ export async function runBudgetCheck(db: Database, memberId: string): Promise<Ch
   }
 
   let emailed = false;
-  if (newWarnings.length > 0) {
+  if (newWarnings.length > 0 && (await stewardWantsEmail(db, memberId, "budget_reached"))) {
     const emails = await caretakerEmails(db, memberId);
     const body = newWarnings
       .map((w) =>

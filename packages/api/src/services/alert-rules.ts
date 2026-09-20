@@ -93,8 +93,10 @@ export function buildCandidates(input: CandidateInput): AlertCandidate[] {
   }
 
   if (enabled("deposit_arrived")) {
+    // Only "significant" deposits are worth interrupting anyone about.
+    const threshold = input.rules.deposit_arrived?.thresholdCents ?? 0;
     for (const txn of input.newTransactions) {
-      if (txn.amountCents >= 0) continue;
+      if (txn.amountCents >= 0 || -txn.amountCents < threshold) continue;
       const amount = formatCentsForSpeech(-txn.amountCents);
       const source = txn.merchantName ?? "your bank";
       candidates.push({
@@ -155,6 +157,9 @@ const PRIORITY: Record<AlertRuleType, number> = {
   unusual_txn: 1,
   shortfall: 2,
   deposit_arrived: 3,
+  // Not part of the voice-call candidate pipeline (email-only, see
+  // notifications.ts), but still needs a slot in this map's type.
+  budget_reached: 4,
 };
 
 export function byPriority(a: AlertCandidate, b: AlertCandidate): number {

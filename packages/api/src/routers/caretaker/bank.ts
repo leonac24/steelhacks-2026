@@ -8,12 +8,29 @@ import z from "zod";
 import { protectedProcedure, requireCaretaker, requirePrimaryCaretaker } from "../../index";
 import * as activity from "../../services/activity";
 import * as bankAdmin from "../../services/bank-admin";
+import { connectDemoBank } from "../../services/demo-bank";
 import { runBudgetCheck, runFraudCheck } from "../../services/notifications";
 
 const memberInput = z.object({ memberId: z.string() });
 const cents = z.number().int().min(-100_000_000).max(100_000_000);
 
 export const bankRouter = {
+  // The only bank a caretaker can add from /accounts — see services/demo-bank.
+  connectDemo: protectedProcedure
+    .input(memberInput)
+    .use(requirePrimaryCaretaker)
+    .handler(async ({ input, context }) => {
+      const result = await connectDemoBank(context, input.memberId);
+      if (!result.alreadyConnected) {
+        await activity.log(context.db, {
+          memberId: input.memberId,
+          type: "bank_synced",
+          summaryText: `${context.session.user.name} connected Demo Bank.`,
+        });
+      }
+      return result;
+    }),
+
   accounts: {
     list: protectedProcedure
       .input(memberInput)

@@ -11,11 +11,11 @@
 // Today this reads through the caretaker procedures so the demo can toggle.
 import { Skeleton } from "@steelhacks-2026/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { useActiveMember } from "@/hooks/use-active-member";
 import { SUPPORT_PHONE, SUPPORT_PHONE_DISPLAY } from "@/lib/config";
 import { daysUntilLabel, formatCents, formatCentsWhole, formatIsoDate } from "@/lib/format";
-import { useActiveMember } from "@/lib/use-active-member";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth/simple")({
@@ -23,9 +23,9 @@ export const Route = createFileRoute("/_auth/simple")({
 });
 
 function SimpleRoute() {
-  const { memberId, isLoading } = useActiveMember();
+  const { activeMemberId, isLoading } = useActiveMember();
 
-  if (isLoading || !memberId) {
+  if (isLoading || !activeMemberId) {
     return (
       <div className="mx-auto w-full max-w-2xl space-y-6 p-6">
         <Skeleton className="h-52 w-full" />
@@ -34,7 +34,7 @@ function SimpleRoute() {
     );
   }
 
-  return <SimpleView memberId={memberId} />;
+  return <SimpleView memberId={activeMemberId} />;
 }
 
 function SimpleView({ memberId }: { memberId: string }) {
@@ -75,7 +75,7 @@ function SimpleView({ memberId }: { memberId: string }) {
         href={`tel:${SUPPORT_PHONE}`}
         className="flex min-h-20 w-full items-center justify-center bg-primary px-6 text-center text-3xl font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ring"
       >
-        Call June
+        Call Robin
       </a>
       <p className="-mt-4 text-center text-lg text-muted-foreground">
         or dial {SUPPORT_PHONE_DISPLAY} from any phone
@@ -135,10 +135,10 @@ function SimpleView({ memberId }: { memberId: string }) {
 
       <section aria-labelledby="alerts-heading">
         <h2 id="alerts-heading" className="mb-3 text-2xl font-semibold">
-          Recent calls from June
+          Recent calls from Robin
         </h2>
         {s.recentAlerts.length === 0 ? (
-          <p className="text-muted-foreground">June hasn't needed to call you.</p>
+          <p className="text-muted-foreground">Robin hasn't needed to call you.</p>
         ) : (
           <ul className="space-y-3">
             {s.recentAlerts.map((alert, i) => (
@@ -149,6 +149,15 @@ function SimpleView({ memberId }: { memberId: string }) {
           </ul>
         )}
       </section>
+
+      <div className="pt-4 text-center">
+        <Link
+          to="/dashboard"
+          className="text-base text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Exit nester mode
+        </Link>
+      </div>
     </div>
   );
 }

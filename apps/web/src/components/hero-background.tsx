@@ -456,59 +456,60 @@ export function HeroBackground() {
             deeper and more saturated than a literal dawn would be — enough to
             hold white type without losing the pastel feel. */}
         <linearGradient id="hero-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3f7a95" />
-          <stop offset="34%" stopColor="#5c93a3" />
-          <stop offset="55%" stopColor="#7ea69f" />
-          <stop offset="68%" stopColor="#8ec3a8" />
-          <stop offset="78%" stopColor="#a8d6ba" />
-          <stop offset="100%" stopColor="#c3e6c9" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-sky-0)" }} />
+          <stop offset="34%" style={{ stopColor: "var(--hero-sky-1)" }} />
+          <stop offset="55%" style={{ stopColor: "var(--hero-sky-2)" }} />
+          <stop offset="68%" style={{ stopColor: "var(--hero-sky-3)" }} />
+          <stop offset="78%" style={{ stopColor: "var(--hero-sky-4)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-sky-5)" }} />
         </linearGradient>
         <radialGradient id="hero-glow" cx="50%" cy="70%" r="42%">
-          <stop offset="0%" stopColor="#cdf0d9" stopOpacity="0.36" />
-          <stop offset="55%" stopColor="#bfe8d4" stopOpacity="0.11" />
-          <stop offset="100%" stopColor="#bfe8d4" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-glow-0)" }} stopOpacity="0.36" />
+          <stop offset="55%" style={{ stopColor: "var(--hero-glow-1)" }} stopOpacity="0.11" />
+          <stop offset="100%" style={{ stopColor: "var(--hero-glow-1)" }} stopOpacity="0" />
         </radialGradient>
 
         {/* Ridge fills. Each is lighter and hazier than the one in front of it,
-            which is what sells distance in a flat vector scene. */}
+            which is what sells distance in a flat vector scene. Colors come
+            from CSS variables so the whole scene re-tints for dark mode. */}
         <linearGradient id="ridge-1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#adb9c8" />
-          <stop offset="100%" stopColor="#bcc2cb" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-1-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-1-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#97a7b9" />
-          <stop offset="100%" stopColor="#a8b2bf" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-2-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-2-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-3" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8b9cae" />
-          <stop offset="100%" stopColor="#9aa7b4" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-3-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-3-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-4" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6f8395" />
-          <stop offset="100%" stopColor="#7d8c9a" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-4-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-4-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-5" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#526675" />
-          <stop offset="100%" stopColor="#5d6b76" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-5-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-5-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-6" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3a4a52" />
-          <stop offset="100%" stopColor="#313f46" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-6-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-6-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-7" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#26322f" />
-          <stop offset="100%" stopColor="#1b2422" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-7-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-7-bottom)" }} />
         </linearGradient>
         <linearGradient id="ridge-8" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#141b19" />
-          <stop offset="100%" stopColor="#0d1211" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-ridge-8-top)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--hero-ridge-8-bottom)" }} />
         </linearGradient>
 
         {/* Haze wash laid over each distant ridge so the ridge below reads as
             closer without having to hand-pick a dozen more fill colors. */}
         <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#c9e6d2" stopOpacity="0.44" />
-          <stop offset="100%" stopColor="#cfe9d8" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: "var(--hero-haze-0)" }} stopOpacity="0.44" />
+          <stop offset="100%" style={{ stopColor: "var(--hero-haze-1)" }} stopOpacity="0" />
         </linearGradient>
 
         {/* Canopy grain. Turbulence over the near hills breaks up the flat fill

@@ -28,7 +28,9 @@ export const DEFAULT_ALERT_RULES: NewAlertRule[] = [
   { type: "bill_due_unfunded", enabled: true, thresholdCents: null },
   // Only call about unusual charges at or above this amount.
   { type: "unusual_txn", enabled: true, thresholdCents: 10_000 },
-  { type: "deposit_arrived", enabled: true, thresholdCents: null },
+  // Only "significant" deposits — smaller ones don't interrupt anyone.
+  { type: "deposit_arrived", enabled: true, thresholdCents: 50_000 },
+  { type: "budget_reached", enabled: true, thresholdCents: null },
 ];
 
 export const DEFAULT_BUDGETS: NewBudget[] = [

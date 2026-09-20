@@ -7,8 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 
+import { useActiveMember } from "@/hooks/use-active-member";
 import { timeAgo, timeLeft } from "@/lib/format";
-import { useActiveMember } from "@/lib/use-active-member";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth/approvals")({
@@ -16,10 +16,10 @@ export const Route = createFileRoute("/_auth/approvals")({
 });
 
 function ApprovalsRoute() {
-  const { member, memberId, isLoading } = useActiveMember();
+  const { activeMember, activeMemberId, isLoading } = useActiveMember();
 
   if (isLoading) return <Skeleton className="m-6 h-40 w-full max-w-3xl" />;
-  if (!memberId) {
+  if (!activeMemberId) {
     return <p className="p-6 text-muted-foreground">No members linked to this account.</p>;
   }
 
@@ -28,10 +28,10 @@ function ApprovalsRoute() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Approvals</h1>
         <p className="text-sm text-muted-foreground">
-          Changes {member?.preferredName} asked for that need your decision.
+          Changes {activeMember?.preferredName} asked for that need your decision.
         </p>
       </div>
-      <Queue memberId={memberId} />
+      <Queue memberId={activeMemberId} />
     </div>
   );
 }

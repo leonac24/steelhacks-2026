@@ -47,6 +47,7 @@ const SETTING_LABELS = {
   reminderMode: "reminders",
   voiceSpeed: "voice speed",
   notifyCaretakerOnUnanswered: "missed-call notices",
+  assistantName: "the assistant",
 } as const;
 
 export const settingsRouter = {
@@ -72,6 +73,7 @@ export const settingsRouter = {
         // ElevenLabs accepts roughly 0.7-1.2.
         voiceSpeed: z.number().min(0.7).max(1.2).optional(),
         notifyCaretakerOnUnanswered: z.boolean().optional(),
+        assistantName: z.enum(["Jay", "Robin"]).optional(),
       }),
     )
     .use(requirePrimaryCaretaker)
@@ -190,17 +192,31 @@ export const alertRulesRouter = {
         type: z.enum(alertRuleType.enumValues),
         enabled: z.boolean(),
         thresholdCents: cents.nullable().optional(),
+        notifySteward: z.boolean().optional(),
+        notifyNester: z.boolean().optional(),
       }),
     )
     .use(requirePrimaryCaretaker)
     .handler(async ({ input, context }) => {
-      const { memberId, type, enabled, thresholdCents } = input;
+      const { memberId, type, enabled, thresholdCents, notifySteward, notifyNester } = input;
       const [row] = await context.db
         .insert(alertRule)
-        .values({ memberId, type, enabled, thresholdCents })
+        .values({
+          memberId,
+          type,
+          enabled,
+          thresholdCents,
+          notifySteward,
+          notifyNester,
+        })
         .onConflictDoUpdate({
           target: [alertRule.memberId, alertRule.type],
-          set: { enabled, ...(thresholdCents !== undefined && { thresholdCents }) },
+          set: {
+            enabled,
+            ...(thresholdCents !== undefined && { thresholdCents }),
+            ...(notifySteward !== undefined && { notifySteward }),
+            ...(notifyNester !== undefined && { notifyNester }),
+          },
         })
         .returning();
       await logEdit(context, memberId, `turned ${enabled ? "on" : "off"} ${type} alerts.`);

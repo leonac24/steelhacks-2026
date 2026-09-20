@@ -119,11 +119,16 @@ export async function dispatch(
   const skipped: { dedupeKey: string; reason: string }[] = [];
   if (candidates.length === 0) return { placed: 0, skipped, candidates: 0 };
 
-  const [target, settings] = await Promise.all([
+  const [target, settings, rules] = await Promise.all([
     db.query.member.findFirst({ where: eq(member.id, memberId) }),
     db.query.memberSettings.findFirst({ where: eq(memberSettings.memberId, memberId) }),
+    db.select().from(alertRule).where(eq(alertRule.memberId, memberId)),
   ]);
   if (!target || !settings) throw new Error(`Member ${memberId} is not fully set up`);
+  const notifyMap = new Map(rules.map((r) => [r.type, r]));
+  // Caretaker-email alerts (unusual charges, significant deposits) — the
+  // voice call below is the member-facing channel, this is the steward one.
+  const EMAILABLE_TYPES: AlertRuleType[] = ["unusual_txn", "deposit_arrived"];
 
   const today = todayInTimezone(target.timezone, now);
   const startOfLocalDay = new Date(`${today}T00:00:00Z`);
@@ -136,6 +141,29 @@ export async function dispatch(
   let placed = 0;
 
   for (const candidate of candidates) {
+    const rule = notifyMap.get(candidate.ruleType);
+    const notifyNester = rule?.notifyNester ?? true;
+    const notifySteward = rule?.notifySteward ?? true;
+    const emailSteward = () =>
+      EMAILABLE_TYPES.includes(candidate.ruleType) && notifySteward
+        ? notifyCaretakers(db, memberId, candidate.summaryText)
+        : Promise.resolve();
+
+    if (!notifyNester) {
+      // The member opted out of this one; still tell the steward by email
+      // (if they're opted in) and record it so we don't re-evaluate forever.
+      await emailSteward();
+      await db.insert(alertSent).values({
+        memberId,
+        ruleType: candidate.ruleType,
+        dedupeKey: candidate.dedupeKey,
+        channel: "email",
+        status: "answered",
+        sentAt: now,
+      });
+      continue;
+    }
+
     const decision = checkDelivery({
       localTime: localTimeInTimezone(target.timezone, now),
       quietHoursStart: settings.quietHoursStart,
@@ -184,9 +212,7 @@ export async function dispatch(
         simulated: call.simulated,
       },
     });
-    if (candidate.ruleType === "unusual_txn") {
-      await notifyCaretakers(db, memberId, candidate.summaryText);
-    }
+    await emailSteward();
 
     callsPlacedToday++;
     placed++;

@@ -45,40 +45,101 @@
   --sidebar-accent-foreground: #1a4a5c;
   --sidebar-border: #cdeee2;
   --sidebar-ring: color-mix(in oklch, #1c6f6a 50%, transparent);
+
+  /* Landing-page hero scene — dusk over blue/green mountains. Swapped for a
+     moonlit palette under .dark; see there for the night version. */
+  --hero-sky-0: #3f7a95;
+  --hero-sky-1: #5c93a3;
+  --hero-sky-2: #7ea69f;
+  --hero-sky-3: #8ec3a8;
+  --hero-sky-4: #a8d6ba;
+  --hero-sky-5: #c3e6c9;
+  --hero-glow-0: #cdf0d9;
+  --hero-glow-1: #bfe8d4;
+  --hero-ridge-1-top: #adb9c8;
+  --hero-ridge-1-bottom: #bcc2cb;
+  --hero-ridge-2-top: #97a7b9;
+  --hero-ridge-2-bottom: #a8b2bf;
+  --hero-ridge-3-top: #8b9cae;
+  --hero-ridge-3-bottom: #9aa7b4;
+  --hero-ridge-4-top: #6f8395;
+  --hero-ridge-4-bottom: #7d8c9a;
+  --hero-ridge-5-top: #526675;
+  --hero-ridge-5-bottom: #5d6b76;
+  --hero-ridge-6-top: #3a4a52;
+  --hero-ridge-6-bottom: #313f46;
+  --hero-ridge-7-top: #26322f;
+  --hero-ridge-7-bottom: #1b2422;
+  --hero-ridge-8-top: #141b19;
+  --hero-ridge-8-bottom: #0d1211;
+  --hero-haze-0: #c9e6d2;
+  --hero-haze-1: #cfe9d8;
 }
 
 .dark {
-  --background: #10262a;
-  --foreground: #e6f5f1;
-  --card: #163730;
-  --card-foreground: #e6f5f1;
-  --popover: #163730;
-  --popover-foreground: #e6f5f1;
-  --primary: #6fc9b8;
-  --primary-foreground: #0d3530;
-  --secondary: #1f4a41;
-  --secondary-foreground: #cdeee2;
-  --muted: #1a3d38;
-  --muted-foreground: #9cc4bc;
-  --accent: #2a5a68;
-  --accent-foreground: #bfe3ee;
+  /* Bluer, less green than the first pass — panels lean navy/slate-blue
+     instead of teal, accent shifted from mint toward cyan-blue. */
+  --background: #10222c;
+  --foreground: #e6f0f5;
+  --card: #16303d;
+  --card-foreground: #e6f0f5;
+  --popover: #16303d;
+  --popover-foreground: #e6f0f5;
+  --primary: #6fc0d0;
+  --primary-foreground: #0d2530;
+  --secondary: #1f3f4d;
+  --secondary-foreground: #cfe6f0;
+  --muted: #1a3540;
+  --muted-foreground: #9cb9c4;
+  --accent: #2a4f68;
+  --accent-foreground: #bfd8ee;
   --destructive: #e05a4d;
-  --border: color-mix(in oklch, #6fc9b8 20%, transparent);
-  --input: color-mix(in oklch, #6fc9b8 24%, transparent);
-  --ring: color-mix(in oklch, #6fc9b8 55%, transparent);
-  --chart-1: #6fc9b8;
+  --border: color-mix(in oklch, #6fc0d0 20%, transparent);
+  --input: color-mix(in oklch, #6fc0d0 24%, transparent);
+  --ring: color-mix(in oklch, #6fc0d0 55%, transparent);
+  --chart-1: #6fc0d0;
   --chart-2: #6fa8d8;
-  --chart-3: #8fd6a8;
+  --chart-3: #8fc9d6;
   --chart-4: #5b8fc9;
-  --chart-5: #a8ddc9;
-  --sidebar: #10262a;
-  --sidebar-foreground: #e6f5f1;
-  --sidebar-primary: #6fc9b8;
-  --sidebar-primary-foreground: #0d3530;
-  --sidebar-accent: #2a5a68;
-  --sidebar-accent-foreground: #bfe3ee;
-  --sidebar-border: color-mix(in oklch, #6fc9b8 20%, transparent);
-  --sidebar-ring: color-mix(in oklch, #6fc9b8 55%, transparent);
+  --chart-5: #a8cfdd;
+  --sidebar: #10222c;
+  --sidebar-foreground: #e6f0f5;
+  --sidebar-primary: #6fc0d0;
+  --sidebar-primary-foreground: #0d2530;
+  --sidebar-accent: #2a4f68;
+  --sidebar-accent-foreground: #bfd8ee;
+  --sidebar-border: color-mix(in oklch, #6fc0d0 20%, transparent);
+  --sidebar-ring: color-mix(in oklch, #6fc0d0 55%, transparent);
+
+  /* Night version of the hero scene: same mountain layout, a moonlit
+     blue-navy sky instead of dusk, ridges darkened and cooled to match.
+     Kept deliberately conservative — desaturated, not blue-black flashy. */
+  --hero-sky-0: #0d1b2e;
+  --hero-sky-1: #16283d;
+  --hero-sky-2: #1f3347;
+  --hero-sky-3: #2c4054;
+  --hero-sky-4: #3a5468;
+  --hero-sky-5: #4a6b74;
+  --hero-glow-0: #dbe9f0;
+  --hero-glow-1: #b9d3de;
+  --hero-ridge-1-top: #2e4256;
+  --hero-ridge-1-bottom: #34495d;
+  --hero-ridge-2-top: #263a4c;
+  --hero-ridge-2-bottom: #2c4053;
+  --hero-ridge-3-top: #203243;
+  --hero-ridge-3-bottom: #26394a;
+  --hero-ridge-4-top: #1a2a38;
+  --hero-ridge-4-bottom: #1f3040;
+  --hero-ridge-5-top: #142330;
+  --hero-ridge-5-bottom: #182835;
+  --hero-ridge-6-top: #101c27;
+  --hero-ridge-6-bottom: #13202b;
+  --hero-ridge-7-top: #0b141c;
+  --hero-ridge-7-bottom: #0d1720;
+  --hero-ridge-8-top: #070d12;
+  --hero-ridge-8-bottom: #080f14;
+  --hero-haze-0: #4a6478;
+  --hero-haze-1: #4f6b7d;
 }
 
 @theme inline {

@@ -1,26 +1,26 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 
+import { useAppState } from "@/lib/app-state";
 import { orpc } from "@/utils/orpc";
 
-// Which member the caretaker dashboard is currently looking at. Kept in the
-// URL (?memberId=...) on the `_auth` layout route so it survives navigation
-// between Dashboard/Budget/Transactions and is shareable/bookmarkable.
+// Which member (nester) every interface is currently showing — the
+// caretaker dashboard, the sidebar switcher, and the senior view all read
+// from this single source (localStorage-backed via useAppState) so switching
+// nesters never falls out of sync between the steward tools and nester mode.
 export function useActiveMember() {
-  const navigate = useNavigate();
-  const search = useSearch({ from: "/_auth" });
+  const { activeMemberId: storedId, setActiveMemberId } = useAppState();
   const membersQuery = useQuery(orpc.caretaker.members.list.queryOptions());
   const members = membersQuery.data ?? [];
 
-  const activeMemberId =
-    search.memberId && members.some((m) => m.id === search.memberId)
-      ? search.memberId
-      : members[0]?.id;
+  // A stored id from a previous session or a different steward may no
+  // longer be ours; fall back to the first linked member.
+  const activeMemberId = (storedId && members.some((m) => m.id === storedId) ? storedId : members[0]?.id) ?? undefined;
   const activeMember = members.find((m) => m.id === activeMemberId) ?? null;
 
-  function setActiveMemberId(memberId: string) {
-    void navigate({ to: ".", search: (prev) => ({ ...prev, memberId }) });
-  }
+  useEffect(() => {
+    if (activeMemberId && activeMemberId !== storedId) setActiveMemberId(activeMemberId);
+  }, [activeMemberId, storedId, setActiveMemberId]);
 
   return {
     members,
